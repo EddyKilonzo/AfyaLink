@@ -1,0 +1,69 @@
+import {
+  BadRequestException,
+  ConflictException,
+  HttpException,
+  InternalServerErrorException,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+
+/** MySQL / mysql2 driver error codes that mean the database cannot be reached. */
+const CONNECTION_ERROR_CODES = new Set([
+  'ECONNREFUSED',
+  'ECONNRESET',
+  'ETIMEDOUT',
+  'EPIPE',
+  'PROTOCOL_CONNECTION_LOST',
+  'ER_CON_COUNT_ERROR',
+  'ER_ACCESS_DENIED_ERROR',
+  'ER_BAD_DB_ERROR',
+  'ER_LOCK_WAIT_TIMEOUT',
+]);
+
+const BAD_INPUT_CODES = new Set([
+  'ER_NO_REFERENCED_ROW_2',
+  'ER_CHECK_CONSTRAINT_VIOLATED',
+  'ER_TRUNCATED_WRONG_VALUE',
+  'ER_DATA_TOO_LONG',
+  'WARN_DATA_TRUNCATED',
+]);
+
+export function errorCode(error: unknown): string | undefined {
+  if (typeof error !== 'object' || error === null) return undefined;
+  const direct = (error as { code?: unknown }).code;
+  if (typeof direct === 'string') return direct;
+  // TypeORM's QueryFailedError keeps the driver error on `driverError`.
+  const driver = (error as { driverError?: { code?: unknown } }).driverError?.code;
+  return typeof driver === 'string' ? driver : undefined;
+}
+
+/**
+ * Converts any error into an HttpException. Existing HttpExceptions pass
+ * through untouched; database/driver errors become 409/400/503; everything
+ * else becomes a generic 500. Only the action name and error code are
+ * logged, never SQL, parameters or request bodies, so health data stays out
+ * of the logs.
+ */
+export function toHttpException(error: unknown, logger: Logger, action: string): HttpException {
+  if (error instanceof HttpException) return error;
+
+  const code = errorCode(error);
+  if (code === 'ER_DUP_ENTRY') {
+    return new ConflictException('A record with the same unique value already exists.');
+  }
+  if (code && BAD_INPUT_CODES.has(code)) {
+    logger.warn(`${action} rejected by database constraint (${code}).`);
+    return new BadRequestException('The submitted data is not valid for this record.');
+  }
+  if (code && CONNECTION_ERROR_CODES.has(code)) {
+    logger.error(`${action} failed: database unreachable (${code}).`);
+    return new ServiceUnavailableException('Database is temporarily unavailable. Please retry shortly.');
+  }
+  if (error instanceof Error && /DataSource is not initialized|Connection is not established/i.test(error.message)) {
+    return new ServiceUnavailableException('Database is temporarily unavailable. Please retry shortly.');
+  }
+
+  const name = error instanceof Error ? error.name : typeof error;
+  logger.error(`${action} failed unexpectedly (${code ?? name}).`);
+  return new InternalServerErrorException('Something went wrong. Please try again.');
+}
