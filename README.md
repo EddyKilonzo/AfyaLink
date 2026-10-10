@@ -32,7 +32,6 @@ afyalink/
 ├── docs/                  architecture, database schema, API, development plan
 ├── package.json           root scripts (concurrently)
 ├── .env.example
-├── .editorconfig
 └── .gitignore
 ```
 

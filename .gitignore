@@ -101,7 +101,9 @@ Desktop.ini
 $RECYCLE.BIN/
 
 # ---------------------------------------------------------------------------
-# Tool scratch output
+# Tool scratch output and generated agent files
 # ---------------------------------------------------------------------------
+.editorconfig
+frontend/AGENTS.md
 graphify-out/
 .claude/settings.local.json
