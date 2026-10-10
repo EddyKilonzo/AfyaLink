@@ -1,0 +1,36 @@
+{
+  "name": "afyalink",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AfyaLink: An Offline-First Community Health Reporting System for Rural Kenya. From Community Reports to Faster Health Action.",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "postinstall": "npm run install:frontend && npm run install:backend",
+    "install:frontend": "npm --prefix frontend install --no-audit --no-fund",
+    "install:backend": "npm --prefix backend install --no-audit --no-fund",
+    "dev": "concurrently -k -n FRONTEND,BACKEND -c blue,green \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:backend": "npm --prefix backend run start:dev",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "npm --prefix frontend run build",
+    "build:backend": "npm --prefix backend run build",
+    "start": "concurrently -k -n FRONTEND,BACKEND -c blue,green \"npm --prefix frontend run start\" \"npm --prefix backend run start:prod\"",
+    "lint": "npm run lint:frontend && npm run lint:backend",
+    "lint:frontend": "npm --prefix frontend run lint",
+    "lint:backend": "npm --prefix backend run lint",
+    "test": "npm run test:backend && npm run test:backend:e2e",
+    "test:backend": "npm --prefix backend run test",
+    "test:backend:e2e": "npm --prefix backend run test:e2e",
+    "typecheck": "npm run typecheck:frontend && npm run typecheck:backend",
+    "typecheck:frontend": "npm --prefix frontend run typecheck",
+    "typecheck:backend": "npm --prefix backend run typecheck",
+    "db:migrate": "npm --prefix backend run db:migrate",
+    "db:seed": "npm --prefix backend run db:seed",
+    "db:status": "npm --prefix backend run db:status"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
