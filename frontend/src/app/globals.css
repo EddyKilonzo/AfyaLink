@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+/*
+ * AfyaLink design tokens. A calm clinical teal for primary actions, warm
+ * neutrals for surfaces, and reserved signal colours for sync and severity
+ * states so they stay meaningful.
+ */
+@theme inline {
+  --font-sans: var(--font-sans-app), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display-app), var(--font-sans-app), ui-sans-serif, system-ui, sans-serif;
+
+  --color-canvas: #f6f5f1;
+  --color-surface: #ffffff;
+  --color-ink: #13221f;
+  --color-muted: #5b6b67;
+  --color-line: #e3e1d9;
+
+  --color-brand-50: #ecf7f4;
+  --color-brand-100: #d2ede6;
+  --color-brand-200: #a6dacd;
+  --color-brand-500: #13806b;
+  --color-brand-600: #0e6a59;
+  --color-brand-700: #0b5447;
+  --color-brand-900: #07332b;
+
+  --color-pending: #b45309;
+  --color-pending-bg: #fef3c7;
+  --color-syncing: #1d4ed8;
+  --color-syncing-bg: #dbeafe;
+  --color-synced: #047857;
+  --color-synced-bg: #d1fae5;
+  --color-failed: #b91c1c;
+  --color-failed-bg: #fee2e2;
+
+  --color-sev-low: #4d7c0f;
+  --color-sev-moderate: #b45309;
+  --color-sev-high: #c2410c;
+  --color-sev-critical: #b91c1c;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+/* Leaflet sits inside rounded cards; keep its controls below app overlays. */
+.leaflet-container {
+  font-family: var(--font-sans);
+  z-index: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
