@@ -45,7 +45,7 @@ afyalink/
 ## Quick start
 
 ```bash
-cp .env.example .env        # then fill in DB_* and SESSION_SECRET
+# create .env in the repo root with the variables listed under Environment variables
 npm install                 # installs root, frontend/ and backend/ dependencies
 npm run db:migrate          # creates the database (if permitted) and applies the schema
 npm run db:seed             # loads synthetic demo data (refuses when NODE_ENV=production)
@@ -79,7 +79,7 @@ Both apps start without MySQL. `GET /api/health` returns `"database": "not_confi
 
 ## Environment variables
 
-See [`.env.example`](.env.example) for the full list. Key ones:
+Create a `.env` file in the repository root (it is gitignored). Variables:
 
 | Variable | Used by | Notes |
 | --- | --- | --- |
