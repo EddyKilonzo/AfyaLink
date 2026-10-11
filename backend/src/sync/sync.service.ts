@@ -113,7 +113,8 @@ export class SyncService {
         return { id, status: 'rejected', reason: 'Report ID belongs to another user.' };
       }
       if (error instanceof BadRequestException) {
-        return { id, status: 'rejected', reason: 'Report failed database validation.' };
+        // Messages are fixed server strings (policy or constraint), never echoed input.
+        return { id, status: 'rejected', reason: error.message };
       }
       // Infrastructure errors (DB down, 503) abort the batch so the client retries later.
       throw error;

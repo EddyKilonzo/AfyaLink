@@ -22,7 +22,8 @@ Two independent apps share no code at runtime. Enums are mirrored by hand betwee
 | Module | Responsibility |
 | --- | --- |
 | `DatabaseModule` (global) | TypeORM DataSource with `manualInitialization`. `DatabaseService` connects in the background and retries every 15 s; `assertReady()` throws 503 while MySQL is unavailable. |
-| `AuthModule` (global) | Login/logout/me/csrf/change-password, JWT signing, `LoginAttemptsService` (lockout), `SessionRevocationService`. |
+| `AuthModule` (global) | Login/logout/logout-all/me/csrf/change-password, JWT signing, `CsrfService` (session-bound tokens), `MfaService` (TOTP), `LoginAttemptsService` (per account+IP and per-account lockout), `SessionRevocationService` (MySQL-backed). |
+| `AuditModule` (global) | `AuditService.record()` (best effort, append-only) and the read-only `GET /audit-logs`. |
 | `UsersModule` | User lookups, session state for the guard (short cache), admin user management (list/search, create, update, deactivate, password reset). |
 | `LocationsModule` | Administrative units for the report form and the map; ADMIN create. |
 | `ReportsModule` | List/get/create reports. `createIdempotent()` is the single create path; `updateStatus()` is the ADMIN review path. |
@@ -91,7 +92,13 @@ Two independent apps share no code at runtime. Enums are mirrored by hand betwee
 | Session theft via XSS | Session JWT in an HTTP-only cookie. JS never sees it. CSP restricts script and connect sources. |
 | CSRF | `SameSite=Lax` cookies, a double-submit token (HTTP-only cookie plus an in-memory header copy), and an Origin allow-list on unsafe methods. |
 | Brute force | Per-IP throttling (login 5/min) and a per-account lockout (5 failures, then 15 min). bcrypt cost 12. A dummy-hash comparison hides whether an account exists. |
-| Session replay after logout | The `jti` is revoked server-side until the token expires. |
+| Session replay after logout | The `jti` is revoked server-side until the token expires, stored in `revoked_sessions` so it survives restarts and is shared by instances. `logout-all` ends every session. |
+| CSRF via planted cookies | The CSRF token carries an HMAC of the session ID (`CsrfService`), so a token minted for another session or an unsigned value is rejected. |
+| Stolen password (admins) | Optional TOTP two-factor; encrypted secret; single-use codes; admin reset for lost devices. |
+| Lockout abuse (denial of service) | Failures counted per account+IP (5) with a higher per-account cap (25), so one attacker cannot lock the real user out. |
+| Repudiation / insider misuse | `audit_logs` records sign-ins, admin actions, reviews, corrections and exports with actor, IP and request ID. |
+| CSV/formula injection | Export prefixes formula-like text with `'`. |
+| Reporting outside one's area | CHVs are limited to locations in their assigned county. |
 | Stale privileges | `SessionGuard` reads the current role and active flag from the database (10 s cache, cleared on change). `users.tokens_valid_after` ends all sessions on password change/reset, deactivation or role change. |
 | Weak or truncated passwords | Policy: 10+ characters, letters and digits, at most 72 bytes (bcrypt's input limit). |
 | Broken access control | Global `SessionGuard` and `RolesGuard`. Reports are scoped by `chvId` in queries. Other users' reports return 404, not 403. |

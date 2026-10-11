@@ -3,6 +3,15 @@
 # change and reset, deactivation, and account lockout.
 # Re-runnable: it creates a fresh CHV account and location on every run.
 
+# CSRF tokens are bound to the session, so sign-in, password change and
+# logout issue a new one. This hook keeps the csrfToken variable equal to the latest
+# afya_csrf cookie the API set.
+{{+after
+  const cookies = [].concat((response && response.headers && response.headers['set-cookie']) || []);
+  const csrf = cookies.find((c) => c.startsWith('afya_csrf='));
+  if (csrf) exports.csrfToken = decodeURIComponent(csrf.split(';')[0].slice('afya_csrf='.length));
+}}
+
 @adminId = a9030f8c-37d1-4848-88b2-9f6d08e60b2a
 @mwendeId = a8a968ed-0808-48df-a2ab-a8b461ad41de
 @ekaiId = a04a8d2f-bc61-4b10-b0d0-8d97891eb97b
@@ -22,7 +31,7 @@ GET {{baseUrl}}/auth/csrf
 ### Sign in as admin
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "email": "admin@afyalink.test", "password": "AfyaLink#Dev2026" }
 
@@ -73,7 +82,7 @@ GET {{baseUrl}}/users/1
 ### Weak passwords are rejected
 POST {{baseUrl}}/users
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "fullName": "Weak Password", "email": "weak{{runTag}}@afyalink.test", "role": "CHV", "password": "password" }
 
@@ -83,7 +92,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Passwords longer than bcrypt's 72-byte limit are rejected
 POST {{baseUrl}}/users
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "fullName": "Long Password", "email": "long{{runTag}}@afyalink.test", "role": "CHV", "password": "a1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }
 
@@ -92,7 +101,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Server-controlled fields cannot be set (mass assignment)
 POST {{baseUrl}}/users
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "fullName": "Mass Assign", "email": "mass{{runTag}}@afyalink.test", "role": "CHV", "password": "{{initialPassword}}", "passwordHash": "x", "isActive": false, "id": "{{adminId}}" }
 
@@ -101,7 +110,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Names are restricted to name characters
 POST {{baseUrl}}/users
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "fullName": "<script>alert(1)</script>", "email": "xss{{runTag}}@afyalink.test", "role": "CHV", "password": "{{initialPassword}}" }
 
@@ -111,7 +120,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 # @name newUser
 POST {{baseUrl}}/users
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "fullName": "HTTP Test CHV", "email": "  {{newEmail}}  ", "phone": "+254700000099", "role": "CHV", "locationId": 1, "password": "{{initialPassword}}" }
 
@@ -124,7 +133,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Duplicate email is a conflict
 POST {{baseUrl}}/users
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "fullName": "Duplicate", "email": "{{newEmail}}", "role": "CHV", "password": "{{initialPassword}}" }
 
@@ -133,7 +142,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Admins cannot deactivate themselves
 PATCH {{baseUrl}}/users/{{adminId}}
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "isActive": false }
 
@@ -142,7 +151,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Admins cannot demote themselves
 PATCH {{baseUrl}}/users/{{adminId}}
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "role": "CHV" }
 
@@ -151,7 +160,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### An empty update is rejected
 PATCH {{baseUrl}}/users/{{newUser.user.id}}
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 {}
 
@@ -160,7 +169,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Email cannot be changed through PATCH
 PATCH {{baseUrl}}/users/{{newUser.user.id}}
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "email": "takeover@afyalink.test" }
 
@@ -169,7 +178,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Update profile fields
 PATCH {{baseUrl}}/users/{{newUser.user.id}}
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "phone": "+254700000098", "locationId": 3 }
 
@@ -180,7 +189,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Unknown user
 PATCH {{baseUrl}}/users/00000000-0000-4000-8000-000000000000
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "phone": "+254700000097" }
 
@@ -193,7 +202,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Create a location
 POST {{baseUrl}}/locations
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "county": "Kitui", "subCounty": "Kitui West", "ward": "Matinyani", "village": "HTTP test {{runTag}}", "latitude": -1.25, "longitude": 37.9 }
 
@@ -204,7 +213,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### The same location twice is a conflict
 POST {{baseUrl}}/locations
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "county": "Kitui", "subCounty": "Kitui West", "ward": "Matinyani", "village": "HTTP test {{runTag}}" }
 
@@ -213,7 +222,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Location input is validated
 POST {{baseUrl}}/locations
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "county": "<b>Kitui</b>", "subCounty": "X", "ward": "Y", "latitude": 95 }
 
@@ -265,7 +274,7 @@ GET {{baseUrl}}/sync/logs?limit=100
 
 ### Sign out admin
 POST {{baseUrl}}/auth/logout
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 ?? status == 204
 
@@ -276,7 +285,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### New CHV signs in
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "email": "{{newEmail}}", "password": "{{initialPassword}}" }
 
@@ -291,7 +300,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### New CHV files a report for review
 POST {{baseUrl}}/reports
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 {
   "id": "{{reviewReportId}}",
@@ -310,7 +319,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Change password: wrong current password
 POST {{baseUrl}}/auth/change-password
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "currentPassword": "NotMyPassword1", "newPassword": "{{changedPassword}}" }
 
@@ -320,7 +329,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Change password: weak new password
 POST {{baseUrl}}/auth/change-password
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "currentPassword": "{{initialPassword}}", "newPassword": "short" }
 
@@ -329,7 +338,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Change password: must differ from the current one
 POST {{baseUrl}}/auth/change-password
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "currentPassword": "{{initialPassword}}", "newPassword": "{{initialPassword}}" }
 
@@ -346,7 +355,7 @@ Content-Type: application/json
 ### Change password (a fresh session cookie is issued)
 POST {{baseUrl}}/auth/change-password
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "currentPassword": "{{initialPassword}}", "newPassword": "{{changedPassword}}" }
 
@@ -368,14 +377,14 @@ GET {{baseUrl}}/auth/me
 
 ### Sign out
 POST {{baseUrl}}/auth/logout
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 ?? status == 204
 
 ### The old password no longer works
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "email": "{{newEmail}}", "password": "{{initialPassword}}" }
 
@@ -384,7 +393,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### The new password works (this session is kept for the deactivation test)
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "email": "{{newEmail}}", "password": "{{changedPassword}}" }
 
@@ -402,7 +411,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Sign in as admin again
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "email": "admin@afyalink.test", "password": "AfyaLink#Dev2026" }
 
@@ -411,7 +420,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Review the report
 PATCH {{baseUrl}}/reports/{{reviewReportId}}/status
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "status": "REVIEWED", "reviewNote": "Water team notified." }
 
@@ -424,7 +433,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Reviewing twice is a conflict
 PATCH {{baseUrl}}/reports/{{reviewReportId}}/status
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "status": "REVIEWED" }
 
@@ -433,7 +442,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Mark the report actioned
 PATCH {{baseUrl}}/reports/{{reviewReportId}}/status
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "status": "ACTIONED" }
 
@@ -443,7 +452,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Reports cannot move backwards to SUBMITTED
 PATCH {{baseUrl}}/reports/{{reviewReportId}}/status
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "status": "SUBMITTED" }
 
@@ -452,7 +461,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Unknown report
 PATCH {{baseUrl}}/reports/00000000-0000-4000-8000-000000000000/status
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "status": "REVIEWED" }
 
@@ -475,7 +484,7 @@ Cookie: {{newSession2}}
 ### Deactivate the CHV
 PATCH {{baseUrl}}/users/{{newUser.user.id}}
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "isActive": false }
 
@@ -493,7 +502,7 @@ Cookie: {{newSession2}}
 ### A deactivated account cannot sign in (same generic message)
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "email": "{{newEmail}}", "password": "{{changedPassword}}" }
 
@@ -503,7 +512,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Reactivate the CHV
 PATCH {{baseUrl}}/users/{{newUser.user.id}}
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "isActive": true }
 
@@ -521,7 +530,7 @@ Cookie: {{newSession2}}
 ### Admins reset other users' passwords, not their own
 POST {{baseUrl}}/users/{{adminId}}/reset-password
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "password": "{{resetPassword}}" }
 
@@ -530,7 +539,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Reset passwords follow the policy
 POST {{baseUrl}}/users/{{newUser.user.id}}/reset-password
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "password": "12345678901" }
 
@@ -539,7 +548,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Reset the CHV's password
 POST {{baseUrl}}/users/{{newUser.user.id}}/reset-password
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "password": "{{resetPassword}}" }
 
@@ -547,7 +556,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 
 ### Sign out admin
 POST {{baseUrl}}/auth/logout
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 ?? status == 204
 
@@ -558,7 +567,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### The changed password stopped working after the reset
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "email": "{{newEmail}}", "password": "{{changedPassword}}" }
 
@@ -567,7 +576,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### The reset password works
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "email": "{{newEmail}}", "password": "{{resetPassword}}" }
 
@@ -576,7 +585,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### CHVs cannot reach admin user routes
 POST {{baseUrl}}/users/{{mwendeId}}/reset-password
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "password": "{{resetPassword}}" }
 
@@ -584,14 +593,14 @@ X-CSRF-Token: {{csrf.csrfToken}}
 
 ### Sign out
 POST {{baseUrl}}/auth/logout
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 ?? status == 204
 
 ### Failed sign-in 1 of 5 (the successful sign-in above reset the counter)
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "email": "{{newEmail}}", "password": "WrongPassword1" }
 
@@ -600,7 +609,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Failed sign-in 2
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "email": "{{newEmail}}", "password": "WrongPassword2" }
 
@@ -609,7 +618,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Failed sign-in 3
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "email": "{{newEmail}}", "password": "WrongPassword3" }
 
@@ -618,7 +627,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Failed sign-in 4
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "email": "{{newEmail}}", "password": "WrongPassword4" }
 
@@ -627,7 +636,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Failed sign-in 5
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "email": "{{newEmail}}", "password": "WrongPassword5" }
 
@@ -636,7 +645,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### The account is now locked, even for the correct password
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "email": "{{newEmail}}", "password": "{{resetPassword}}" }
 

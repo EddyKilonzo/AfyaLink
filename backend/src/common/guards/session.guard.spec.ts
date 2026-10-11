@@ -1,7 +1,7 @@
 import { UnauthorizedException, type ExecutionContext } from '@nestjs/common';
 import type { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
-import { SessionRevocationService } from '../../auth/session-revocation.service.js';
+import type { SessionRevocationService } from '../../auth/session-revocation.service.js';
 import { UserRole } from '../../database/entities/user.entity.js';
 import type { SessionState, UsersService } from '../../users/users.service.js';
 import { SessionGuard } from './session.guard.js';
@@ -37,7 +37,11 @@ describe('SessionGuard', () => {
 
   beforeEach(() => {
     state = { role: UserRole.CHV, isActive: true, tokensValidAfter: null };
-    revocations = new SessionRevocationService();
+    const revoked = new Set<string>();
+    revocations = {
+      revoke: async (jti: string) => void revoked.add(jti),
+      isRevoked: async (jti?: string) => !jti || revoked.has(jti),
+    } as unknown as SessionRevocationService;
     const users = { getSessionState: vi.fn(async () => state) } as unknown as UsersService;
     guard = new SessionGuard(reflector, jwt, revocations, users);
   });
@@ -57,7 +61,7 @@ describe('SessionGuard', () => {
     const forged = await new JwtService({ secret: 'y'.repeat(48) }).signAsync({ sub: USER_ID }, { jwtid: 'a' });
     await expect(run(forged)).rejects.toThrow(/expired or invalid/);
     const token = await sign();
-    revocations.revoke('session-1', Date.now() + 60_000);
+    await revocations.revoke('session-1', USER_ID, Date.now() + 60_000);
     await expect(run(token)).rejects.toThrow(/has ended/);
   });
 

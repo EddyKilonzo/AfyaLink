@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { timingSafeEqual } from 'node:crypto';
 import type { Request } from 'express';
+import { CsrfService } from '../../auth/csrf.service.js';
 import type { AppConfig } from '../../config/configuration.js';
 import { CSRF_COOKIE, CSRF_HEADER } from '../constants.js';
 import { SKIP_CSRF_KEY } from '../decorators/auth.decorators.js';
@@ -10,21 +11,23 @@ import { SKIP_CSRF_KEY } from '../decorators/auth.decorators.js';
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 /**
- * Double-submit CSRF protection for cookie-authenticated requests.
+ * CSRF protection for cookie-authenticated requests.
  * The client fetches a token from GET /api/auth/csrf (which also sets it in an
  * HTTP-only cookie), keeps it in memory, and echoes it in the X-CSRF-Token
- * header on every state-changing request. A cross-site attacker can make the
- * browser send the cookie but cannot read the token to set the header.
- * The Origin header, when present, must also be an allowed origin.
+ * header on every state-changing request. The request passes only when:
+ *   1. the Origin header, if present, is an allowed origin;
+ *   2. the header equals the cookie (double submit); and
+ *   3. the token's HMAC is bound to the request's current session (see CsrfService).
  */
 @Injectable()
 export class CsrfGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly config: ConfigService<AppConfig, true>,
+    private readonly csrf: CsrfService,
   ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
     if (SAFE_METHODS.has(request.method.toUpperCase())) return true;
 
@@ -41,7 +44,12 @@ export class CsrfGuard implements CanActivate {
 
     const cookieToken = (request.cookies as Record<string, string> | undefined)?.[CSRF_COOKIE];
     const headerToken = request.headers[CSRF_HEADER];
-    if (!cookieToken || typeof headerToken !== 'string' || !safeEqual(cookieToken, headerToken)) {
+    if (
+      !cookieToken ||
+      typeof headerToken !== 'string' ||
+      !safeEqual(cookieToken, headerToken) ||
+      !this.csrf.verify(headerToken, await this.csrf.bindingFor(request))
+    ) {
       throw new ForbiddenException('Invalid or missing CSRF token.');
     }
     return true;

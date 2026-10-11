@@ -3,8 +3,9 @@ import type { Repository } from 'typeorm';
 import type { SessionUser } from '../common/decorators/auth.decorators.js';
 import type { DatabaseService } from '../database/database.service.js';
 import type { HealthReport } from '../database/entities/health-report.entity.js';
+import type { Location } from '../database/entities/location.entity.js';
 import { SyncStatus, type SyncLog } from '../database/entities/sync-log.entity.js';
-import { UserRole } from '../database/entities/user.entity.js';
+import { UserRole, type User } from '../database/entities/user.entity.js';
 import { ReportsService } from '../reports/reports.service.js';
 import { SyncService } from './sync.service.js';
 
@@ -26,6 +27,12 @@ function fakeReportRepo() {
     }),
   };
 }
+
+// The CHV has no assigned location, so the county policy does not apply here.
+const noAssignment = { findOne: vi.fn(async () => null) } as unknown as Repository<User>;
+const anyLocation = {
+  findOne: vi.fn(async () => ({ id: 1, county: 'Kitui' })),
+} as unknown as Repository<Location>;
 
 function validReport(id: string = randomUUID()) {
   const now = new Date().toISOString();
@@ -49,7 +56,7 @@ describe('SyncService', () => {
   let service: SyncService;
 
   function build(logs: Partial<Repository<SyncLog>> = { insert: vi.fn() }) {
-    const reports = new ReportsService(repo as unknown as Repository<HealthReport>, db);
+    const reports = new ReportsService(repo as unknown as Repository<HealthReport>, db, noAssignment, anyLocation);
     return new SyncService(reports, db, logs as Repository<SyncLog>);
   }
 
@@ -108,7 +115,12 @@ describe('SyncService', () => {
 
   it('surfaces a 503 when the database is unavailable', async () => {
     const down = { assertReady: vi.fn(() => { throw Object.assign(new Error('down'), { code: 'ECONNREFUSED' }); }) };
-    const reports = new ReportsService(repo as unknown as Repository<HealthReport>, down as unknown as DatabaseService);
+    const reports = new ReportsService(
+      repo as unknown as Repository<HealthReport>,
+      down as unknown as DatabaseService,
+      noAssignment,
+      anyLocation,
+    );
     const svc = new SyncService(reports, down as unknown as DatabaseService, { insert: vi.fn() } as never);
     await expect(svc.sync(chv, { reports: [validReport()] })).rejects.toMatchObject({ status: 503 });
   });

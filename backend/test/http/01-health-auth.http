@@ -3,6 +3,15 @@
 # extension or CLI (`--env dev`) against a migrated and seeded database.
 # Seed accounts share the synthetic password AfyaLink#Dev2026.
 
+# CSRF tokens are bound to the session, so sign-in, password change and
+# logout issue a new one. This hook keeps the csrfToken variable equal to the latest
+# afya_csrf cookie the API set.
+{{+after
+  const cookies = [].concat((response && response.headers && response.headers['set-cookie']) || []);
+  const csrf = cookies.find((c) => c.startsWith('afya_csrf='));
+  if (csrf) exports.csrfToken = decodeURIComponent(csrf.split(';')[0].slice('afya_csrf='.length));
+}}
+
 ### Health is public and never cached
 GET {{baseUrl}}/health
 
@@ -53,7 +62,7 @@ X-CSRF-Token: forged-token-value
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 Origin: https://evil.example
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "email": "chv.mwende@afyalink.test", "password": "AfyaLink#Dev2026" }
 
@@ -63,7 +72,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Login body is validated
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "email": "not-an-email", "password": "x" }
 
@@ -72,7 +81,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Extra login fields are rejected
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "email": "chv.mwende@afyalink.test", "password": "AfyaLink#Dev2026", "role": "ADMIN" }
 
@@ -81,7 +90,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Wrong password gets a generic 401
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "email": "chv.mwende@afyalink.test", "password": "WrongPassword123" }
 
@@ -91,7 +100,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Unknown email gets the same generic 401
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "email": "nobody@afyalink.test", "password": "WrongPassword123" }
 
@@ -103,7 +112,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 Origin: {{origin}}
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "email": "CHV.Mwende@afyalink.test ", "password": "AfyaLink#Dev2026" }
 
@@ -132,7 +141,7 @@ POST {{baseUrl}}/auth/logout
 
 ### Logout
 POST {{baseUrl}}/auth/logout
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 ?? status == 204
 

@@ -45,6 +45,17 @@ export class User {
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean;
 
+  @Column({ name: 'mfa_enabled', type: 'boolean', default: false })
+  mfaEnabled: boolean;
+
+  /** AES-256-GCM encrypted TOTP secret; never selected by default. */
+  @Column({ name: 'mfa_secret', type: 'varchar', length: 255, nullable: true, select: false })
+  mfaSecret: string | null;
+
+  /** Last accepted TOTP time step, so a code cannot be used twice. */
+  @Column({ name: 'mfa_last_step', type: 'bigint', unsigned: true, nullable: true, select: false })
+  mfaLastStep: string | null;
+
   @Column({ name: 'last_login_at', type: 'datetime', precision: 6, nullable: true })
   lastLoginAt: Date | null;
 

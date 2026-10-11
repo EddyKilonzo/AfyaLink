@@ -55,6 +55,10 @@ export class DatabaseService implements OnApplicationBootstrap, OnApplicationShu
     return this.state;
   }
 
+  get isReady(): boolean {
+    return this.dataSource.isInitialized;
+  }
+
   assertReady(): void {
     if (!this.dataSource.isInitialized) {
       throw new ServiceUnavailableException(

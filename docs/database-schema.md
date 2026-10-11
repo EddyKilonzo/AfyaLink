@@ -2,7 +2,7 @@
 
 MySQL 8.0+ / MariaDB 10.5+, InnoDB, `utf8mb4_unicode_ci`. All timestamps are stored in UTC (`DATETIME(6)`, TypeORM `timezone: 'Z'`).
 
-- Schema source of truth: [`backend/database/migrations/`](../backend/database/migrations/): `001_initial_schema.sql`, then `002_review_and_session_hardening.sql` (review fields and `users.tokens_valid_after`)
+- Schema source of truth: [`backend/database/migrations/`](../backend/database/migrations/): `001_initial_schema.sql`, then `002_review_and_session_hardening.sql` (review fields and `users.tokens_valid_after`), `003_audit_revocation_mfa.sql` (`audit_logs`, `revoked_sessions`, `users.mfa_*`)
 - ORM mapping: `backend/src/database/entities/*.entity.ts` (`synchronize` is **off**, so the entities must match the SQL)
 - Synthetic seed data: [`backend/database/seeds/001_dev_seed.sql`](../backend/database/seeds/001_dev_seed.sql)
 
@@ -74,6 +74,9 @@ Unique: `(county, sub_county, ward, village)`.
 | `location_id` | INT UNSIGNED NULL | FK → `locations.id`, `ON DELETE SET NULL` |
 | `is_active` | TINYINT(1) | inactive users cannot sign in |
 | `last_login_at` | DATETIME(6) NULL | |
+| `mfa_enabled` | TINYINT(1) | two-factor on (migration 003) |
+| `mfa_secret` | VARCHAR(255) NULL | AES-256-GCM sealed TOTP secret, bound to the user ID; never selected by default (migration 003) |
+| `mfa_last_step` | BIGINT UNSIGNED NULL | last accepted TOTP step, blocks code reuse (migration 003) |
 | `tokens_valid_after` | DATETIME(6) NULL | sessions issued before this are rejected; set on password change/reset, deactivation, role change (migration 002) |
 | `created_at`, `updated_at` | DATETIME(6) | auto |
 
@@ -122,3 +125,27 @@ Index: `(user_id, started_at)`. Holds counts only, never report content.
 
 - The seed file uses `INSERT IGNORE` on fixed IDs, so it can be re-run safely. All seed accounts share the development password `AfyaLink#Dev2026`.
 - MariaDB stores `JSON` as `LONGTEXT` with a validity check; TypeORM handles both engines.
+
+### `audit_logs` (migration 003)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | BIGINT UNSIGNED PK AI | |
+| `actor_id` | CHAR(36) NULL | FK → `users.id`, `ON DELETE SET NULL`; NULL for failed sign-ins of unknown accounts |
+| `action` | VARCHAR(48) | e.g. `report.review`; full list in docs/api.md |
+| `target_type`, `target_id` | VARCHAR NULL | `user` / `report` / `location` and its ID |
+| `ip_address` | VARCHAR(45) NULL | client IP (respects `TRUST_PROXY`) |
+| `request_id` | VARCHAR(64) NULL | matches `X-Request-Id` and log lines |
+| `details` | JSON NULL | scalars only: field names, statuses, counts, filters |
+| `created_at` | DATETIME(6) | |
+
+Indexes: `(created_at)`, `(actor_id, created_at)`, `(action, created_at)`, `(target_type, target_id)`. Append-only from the API. For tamper resistance, grant the runtime DB user only `INSERT, SELECT` on this table.
+
+### `revoked_sessions` (migration 003)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `jti` | CHAR(36) PK | session ID from the JWT |
+| `user_id` | CHAR(36) | FK → `users.id`, `ON DELETE CASCADE` |
+| `expires_at` | DATETIME(6) | indexed; rows past this are pruned |
+| `revoked_at` | DATETIME(6) | |

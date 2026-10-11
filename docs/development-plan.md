@@ -25,7 +25,52 @@
 - [x] Sync history (`GET /sync/logs`)
 - [x] `.http` suite covering every endpoint, run against real MySQL by `npm run test:backend:http`
 
-## Phase 2: UI (waiting on design)
+## Phase 1c: Gap closure (done)
+
+- [x] Audit trail (`audit_logs`, `GET /audit-logs`)
+- [x] County policy for CHV report locations; CHV report correction (SUBMITTED, < 72 h)
+- [x] CSV export with formula-injection protection
+- [x] OpenAPI document (non-production)
+- [x] Session-bound CSRF tokens; persistent session revocation; `logout-all`
+- [x] IP-aware lockout (per account+IP and per account)
+- [x] Optional TOTP two-factor sign-in with admin reset
+- [x] Request IDs in headers, error bodies, logs and audit rows; readiness probe
+- [x] CI workflow (backend + HTTP suite on MySQL 8.4, frontend lint/typecheck/build)
+
+## Phase 1d: Frontend data layer, scaffolding and email (done)
+
+- [x] Typed services for every endpoint (`src/services/*`): auth (login with OTP, logout-all, change password, MFA), users, reports (review, correction, CSV export), locations, analytics (summary, map), sync logs, audit, health/readiness
+- [x] API client: CSRF token stored from login/change-password, session-expiry event on 401, file download, query builder, friendlier 429/5xx messages with request ID
+- [x] Feature hooks (`features/*/hooks.ts`) and `useMutation`; merged server + local report feed
+- [x] Routes for both roles under `(app)` (auth) and `(app)/admin` (ADMIN): dashboard, reports, report detail, new report, sync, maps, settings, admin overview, review queue, users (list/new/detail), locations, audit log; `error`, `global-error`, `not-found`
+- [x] Security: safe `?next=` redirects, role-aware navigation, session-expired redirect, synced reports purged from the device on sign-out, client mirrors of password/OTP rules
+- [x] Functional now: sign-in with OTP step, new report (with area picker), settings (password, 2FA, sign out everywhere), admin user management, review actions. Other screens show live data in `ScaffoldPanel` until designed
+- [x] Backend `MailModule` (SMTP via nodemailer, log/none modes) with account and security notifications
+
+## Phase 1e: Remaining non-design features (done)
+
+- [x] CHV report correction (`/reports/[id]/edit`), shared validated form with create
+- [x] Disease map with React Leaflet (client-only, severity-coloured circles sized by cases, legend, accessible list view)
+- [x] Recharts on dashboard and admin overview (single-series, validated mark colour, text table kept)
+- [x] Two-factor QR code generated locally (the secret never leaves the browser)
+- [x] Frontend unit tests (Vitest + fake-indexeddb): sync engine, API client/CSRF, redirect safety, form rules
+- [x] CI pins npm 11.20 (older npm crashes on a fresh install) and runs frontend tests
+
+## Phase 2: UI redesign (in progress)
+
+- [ ] Design tokens (colour, type, spacing, radius) as CSS variables for Tailwind v4
+- [ ] Component library on top of the tokens
+- [ ] App shell (navigation for both roles, online/sync status)
+- [ ] Landing page
+- [ ] Motion system that respects `prefers-reduced-motion`
+- [ ] Maps with a heat layer
+- [ ] Toasts with an auto-dismiss timer
+- [ ] Honeycomb background texture
+- [x] PWA hardening: PNG icons (192, 512, maskable 512, 180 apple-touch) from the flat SVG mark, icons and manifest precached, redirected pages never cached, service worker cache bumped to `afyalink-v3`
+
+### Route wiring (from the scaffold phase)
+
+Replace each `ScaffoldPanel` with the final design; data hooks stay as they are.
 
 The final page structure and visual design will be supplied. Until then each route renders a placeholder. Wiring checklist per route:
 
@@ -51,7 +96,7 @@ Also in this phase:
 ## Phase 3: Verification
 
 - [ ] Browser end-to-end test (e.g. Playwright): sign in, go offline, create a report, reload, confirm it is `pending`, go online, confirm `synced` and exactly one DB row.
-- [ ] Frontend unit tests for the sync engine (fake-indexeddb).
+- [x] Frontend unit tests for the sync engine (fake-indexeddb).
 - [ ] Lighthouse PWA and accessibility pass on a low-end Android profile.
 
 ## Phase 4: Hardening before any real deployment
@@ -61,4 +106,4 @@ Also in this phase:
 - HTTPS, `TRUST_PROXY`, HSTS preload review, nonce-based CSP.
 - Encrypted backups, data retention policy, audit of admin actions.
 - Admin features are implemented in the API (see Phase 1b); they still need UI.
-- Frontend `types/index.ts` and `services/` need entries for the new endpoints and fields (`reviewedById`, `reviewedAt`, `reviewNote`, map points, sync logs, users CRUD).
+- Frontend: `lib/api.ts` should store the `csrfToken` returned by login/change-password (it already recovers via one retry on 403). The sign-in form needs an optional one-time-code step. `types/index.ts` and `services/` need entries for the new endpoints and fields (`reviewedById`, `reviewedAt`, `reviewNote`, map points, sync logs, users CRUD).

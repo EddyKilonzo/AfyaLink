@@ -5,10 +5,11 @@ Base URL: `http://localhost:3001/api` (global prefix `/api`). JSON only.
 ## Conventions
 
 - **Auth.** An HTTP-only session cookie `afya_session` is set by `POST /auth/login`. Browser clients must send `credentials: "include"`.
-- **CSRF.** For `POST`, `PUT`, `PATCH` and `DELETE`, first call `GET /auth/csrf`, then send the returned token as `X-CSRF-Token`. The token must match the HTTP-only `afya_csrf` cookie. If an `Origin` header is present, it must be in `CORS_ORIGINS`.
+- **CSRF.** For `POST`, `PUT`, `PATCH` and `DELETE`, send a token as `X-CSRF-Token`. Get one from `GET /auth/csrf`; login and change-password also return a fresh one as `csrfToken`. The token must equal the HTTP-only `afya_csrf` cookie and is bound by HMAC to the current session. Sign-in, password change and logout invalidate older tokens: on `403 "Invalid or missing CSRF token."`, fetch a new one and retry once. If an `Origin` header is present, it must be in `CORS_ORIGINS`.
+- **Request IDs.** Every response has an `X-Request-Id` header (a well-formed incoming one, 8–64 of `A-Za-z0-9._-`, is kept). Error bodies include it as `requestId`, and server logs and audit rows carry it.
 - **Errors.** Every error uses the same shape:
   ```json
-  { "statusCode": 400, "error": "BadRequest", "message": ["casesCount must not be less than 1"], "path": "/api/reports", "timestamp": "2026-10-10T03:41:59.553Z" }
+  { "statusCode": 400, "error": "BadRequest", "message": ["casesCount must not be less than 1"], "path": "/api/reports", "requestId": "4b1f…", "timestamp": "2026-10-10T03:41:59.553Z" }
   ```
   | Status | Meaning |
   | --- | --- |
@@ -29,10 +30,16 @@ Base URL: `http://localhost:3001/api` (global prefix `/api`). JSON only.
 
 | Method | Path | Auth | Roles | Status |
 | --- | --- | --- | --- | --- |
-| GET | `/health` | public | – | implemented |
+| GET | `/health` | public | – | implemented (liveness: always 200) |
+| GET | `/health/ready` | public | – | implemented (readiness: 503 without MySQL) |
+| GET | `/docs/openapi.json` | public | – | non-production only |
 | GET | `/auth/csrf` | public | – | implemented (30/min) |
 | POST | `/auth/login` | public + CSRF | – | implemented (5/min/IP + account lockout) |
 | POST | `/auth/logout` | CSRF | – | implemented (revokes session) |
+| POST | `/auth/logout-all` | session + CSRF | any | implemented (ends every session of the user) |
+| POST | `/auth/mfa/setup` | session + CSRF | any | implemented (password required) |
+| POST | `/auth/mfa/enable` | session + CSRF | any | implemented |
+| POST | `/auth/mfa/disable` | session + CSRF | any | implemented (password + code) |
 | GET | `/auth/me` | session | any | implemented |
 | POST | `/auth/change-password` | session + CSRF | any | implemented (5/min; ends other sessions) |
 | GET | `/users` | session | ADMIN | implemented (filters: `role`, `isActive`, `q`) |
@@ -40,11 +47,15 @@ Base URL: `http://localhost:3001/api` (global prefix `/api`). JSON only.
 | POST | `/users` | session + CSRF | ADMIN | implemented (20/min) |
 | PATCH | `/users/:id` | session + CSRF | ADMIN | implemented (no self-deactivate/demote) |
 | POST | `/users/:id/reset-password` | session + CSRF | ADMIN | implemented (10/min; ends that user's sessions) |
+| POST | `/users/:id/reset-mfa` | session + CSRF | ADMIN | implemented (lost device; ends that user's sessions) |
 | GET | `/locations` | session | CHV, ADMIN | implemented (filter: `county`) |
 | POST | `/locations` | session + CSRF | ADMIN | implemented |
 | GET | `/reports` | session | CHV, ADMIN | implemented (CHV: own only) |
 | POST | `/reports` | session + CSRF | CHV, ADMIN | implemented (idempotent) |
 | GET | `/reports/:id` | session | CHV, ADMIN | implemented (CHV: own only) |
+| PATCH | `/reports/:id` | session + CSRF | CHV | implemented (own, SUBMITTED, < 72 h) |
+| GET | `/reports/export` | session | ADMIN | implemented (CSV, ≤ 10 000 rows, 10/min) |
+| GET | `/audit-logs` | session | ADMIN | implemented (read-only) |
 | PATCH | `/reports/:id/status` | session + CSRF | ADMIN | implemented (forward only) |
 | GET | `/analytics/summary` | session | CHV, ADMIN | implemented (CHV: own scope) |
 | GET | `/analytics/map` | session | CHV, ADMIN | implemented (CHV: own scope) |
@@ -57,21 +68,45 @@ Base URL: `http://localhost:3001/api` (global prefix `/api`). JSON only.
 { "status": "ok", "service": "afyalink-backend", "database": "connected", "uptimeSeconds": 26, "timestamp": "…" }
 ```
 
-`database` is one of `not_configured`, `connecting`, `connected` or `unavailable`. The endpoint always returns 200 while the process is up.
+`database` is one of `not_configured`, `connecting`, `connected` or `unavailable`. The endpoint always returns 200 while the process is up (liveness).
+
+`GET /health/ready` returns `200 { "status": "ready", "database": "connected" }`, or 503 while MySQL is not connected (readiness, for load balancers).
 
 ### `GET /auth/csrf`
 
-Returns `{ "csrfToken": "…" }` and sets the `afya_csrf` cookie.
+Returns `{ "csrfToken": "…" }` and sets the `afya_csrf` cookie. The token is bound to the session cookie sent with the request, or to "anonymous" when there is none.
 
 ### `POST /auth/login`
 
-Body: `{ "email": "chv.mwende@afyalink.test", "password": "AfyaLink#Dev2026" }`.
+Body: `{ "email": "chv.mwende@afyalink.test", "password": "AfyaLink#Dev2026", "otp"?: "123456" }`.
 
-Returns `200 { user }` and sets `afya_session`. Wrong credentials and inactive accounts both get `401 "Invalid email or password."`. After 5 failures in 15 minutes the account returns 429 until the window passes.
+Returns `200 { user, csrfToken }`, sets `afya_session`, and replaces the `afya_csrf` cookie with one bound to the new session. Wrong credentials and inactive accounts both get `401 "Invalid email or password."`.
+
+Two-factor accounts:
+- Without `otp`, a correct password gets `401 "One-time code required."`.
+- A wrong or reused code gets `401 "Invalid one-time code."`.
+
+Lockout (429 until the window passes):
+- 5 failures in 15 minutes for the same account from the same IP.
+- 25 failures for the account from any IP.
 
 ### `POST /auth/logout`
 
-Returns `204`. The cookie is cleared and the session ID is revoked server-side.
+Returns `204`. The cookie is cleared, the session ID is revoked server-side (persisted, so it survives restarts), and an anonymous CSRF cookie is set.
+
+### `POST /auth/logout-all`
+
+Returns `204`. Every session of the user, on every device, stops working (including this one).
+
+### Two-factor sign-in (TOTP)
+
+Use any authenticator app (SHA-1, 6 digits, 30 s).
+
+1. `POST /auth/mfa/setup` with `{ "password" }` returns `{ secret, otpauthUrl }`. Show the URL as a QR code. `409` if already enabled.
+2. `POST /auth/mfa/enable` with `{ "code" }` returns `204`. From now on, login needs `otp`.
+3. `POST /auth/mfa/disable` with `{ "password", "code" }` returns `204`.
+
+Codes are accepted for ±30 s and each one works only once. Secrets are stored encrypted with `MFA_ENCRYPTION_KEY`. For a lost device, an admin calls `POST /users/:id/reset-mfa`, which turns two-factor off and ends the user's sessions.
 
 ### `GET /auth/me`
 
@@ -212,3 +247,38 @@ Paginated sync history, newest first: `{ id, userId, deviceId, receivedCount, cr
 ## HTTP test suite
 
 Every endpoint above is exercised by `backend/test/http/*.http`, including the error cases. See the README for `npm run test:backend:http`.
+
+### `PATCH /reports/:id` (CHV)
+
+A CHV corrects their own report. Any of `category`, `conditionName`, `severity`, `casesCount`, `ageGroup`, `symptoms`, `notes`, `locationId`, `latitude`, `longitude` and `observedAt` can change; `null` clears the optional ones. `id`, `status`, `chvId` and `clientCreatedAt` cannot change (400).
+
+| Response | When |
+| --- | --- |
+| `200` + report | Updated |
+| `404` | Not found, or not yours |
+| `409` | Already REVIEWED/ACTIONED, or more than 72 hours after receipt |
+| `400` | Empty body, or a location outside the CHV's county |
+
+### County policy (create, sync, correction)
+
+A CHV with an assigned location may only use locations in the same county: `400 "Location is outside your assigned county."` In `POST /sync` the item is `rejected` with that reason. An unknown `locationId` returns `400 "Unknown location."`. Admins and CHVs without an assigned location are not restricted. A retry of a report already stored is still answered `duplicate`.
+
+### `GET /reports/export` (ADMIN)
+
+Takes the same filters as `GET /reports`; paging is ignored. Returns `text/csv` as an attachment (UTF-8 with BOM, CRLF), at most 10 000 rows (otherwise 400). Columns:
+
+`id, observedAt, receivedAt, category, conditionName, severity, casesCount, ageGroup, symptoms, notes, status, chvId, locationId, county, subCounty, ward, latitude, longitude, reviewedById, reviewedAt, reviewNote`
+
+Text starting with `=`, `+`, `-`, `@`, tab or CR is prefixed with `'` so spreadsheets don't run it as a formula. Each export is audited along with its filters.
+
+### `GET /audit-logs` (ADMIN)
+
+Paginated, newest first. Filters: `action`, `actorId`, `targetId`, `from`, `to`. Rows look like `{ id, actorId, action, targetType, targetId, ipAddress, requestId, details, createdAt }`. `details` holds only scalars such as field names, statuses and counts, never report content, passwords, or the email typed into a failed sign-in.
+
+Actions: `auth.login`, `auth.login_failed`, `auth.logout_all`, `auth.password_change`, `auth.mfa_enable`, `auth.mfa_disable`, `user.create`, `user.update`, `user.password_reset`, `user.mfa_reset`, `location.create`, `report.update`, `report.review`, `report.export`.
+
+There is no route to change or delete entries.
+
+### `GET /docs/openapi.json`
+
+The generated OpenAPI 3 document (non-production only). It is JSON only, with no Swagger UI.

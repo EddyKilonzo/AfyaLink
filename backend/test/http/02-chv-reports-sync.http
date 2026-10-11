@@ -1,6 +1,15 @@
 # AfyaLink HTTP tests: a CHV's reports, offline sync, analytics and map.
 # Re-runnable: every report it creates uses a fresh UUID.
 
+# CSRF tokens are bound to the session, so sign-in, password change and
+# logout issue a new one. This hook keeps the csrfToken variable equal to the latest
+# afya_csrf cookie the API set.
+{{+after
+  const cookies = [].concat((response && response.headers && response.headers['set-cookie']) || []);
+  const csrf = cookies.find((c) => c.startsWith('afya_csrf='));
+  if (csrf) exports.csrfToken = decodeURIComponent(csrf.split(';')[0].slice('afya_csrf='.length));
+}}
+
 @mwendeId = a8a968ed-0808-48df-a2ab-a8b461ad41de
 @ekaiId = a04a8d2f-bc61-4b10-b0d0-8d97891eb97b
 @ekaiReportId = 432498d9-c983-4e4c-bed4-f548f1e49273
@@ -18,7 +27,7 @@ GET {{baseUrl}}/auth/csrf
 # @name login
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "email": "chv.mwende@afyalink.test", "password": "AfyaLink#Dev2026" }
 
@@ -42,7 +51,7 @@ GET {{baseUrl}}/locations?county=Kitui
 ### CHVs cannot create locations
 POST {{baseUrl}}/locations
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "county": "Kitui", "subCounty": "Kitui West", "ward": "Matinyani" }
 
@@ -51,7 +60,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Create a report (client-generated UUID)
 POST {{baseUrl}}/reports
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 {
   "id": "{{reportId}}",
@@ -79,7 +88,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Retrying the same report is idempotent (200 duplicate, no new row)
 POST {{baseUrl}}/reports
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 {
   "id": "{{reportId}}",
@@ -99,7 +108,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Reusing another CHV's report ID is a conflict
 POST {{baseUrl}}/reports
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 {
   "id": "{{ekaiReportId}}",
@@ -117,7 +126,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Mass assignment: chvId and status cannot be set by the client
 POST {{baseUrl}}/reports
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 {
   "id": "{{$uuid}}",
@@ -138,7 +147,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Future observation dates are rejected
 POST {{baseUrl}}/reports
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 {
   "id": "{{$uuid}}",
@@ -157,7 +166,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Invalid enums, counts, coordinates and ID are rejected
 POST {{baseUrl}}/reports
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 {
   "id": "not-a-uuid",
@@ -177,7 +186,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Unknown location is rejected by the database foreign key (400, not 500)
 POST {{baseUrl}}/reports
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 {
   "id": "{{$uuid}}",
@@ -256,7 +265,7 @@ GET {{baseUrl}}/reports/1%20OR%201=1
 ### CHVs cannot review reports
 PATCH {{baseUrl}}/reports/{{reportId}}/status
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "status": "REVIEWED" }
 
@@ -265,7 +274,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Offline sync: new, retried and invalid reports in one batch
 POST {{baseUrl}}/sync
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 {
   "deviceId": "http-test-device",
@@ -318,7 +327,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Re-sending the same report creates nothing new
 POST {{baseUrl}}/sync
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 {
   "deviceId": "http-test-device",
@@ -344,7 +353,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Sync cannot claim another CHV's report ID
 POST {{baseUrl}}/sync
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 {
   "reports": [
@@ -368,7 +377,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### Batches are capped at 50 reports
 POST {{baseUrl}}/sync
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "reports": {{ JSON.stringify(Array.from({ length: 51 }, () => ({}))) }} }
 
@@ -377,7 +386,7 @@ X-CSRF-Token: {{csrf.csrfToken}}
 ### deviceId is restricted to a safe character set
 POST {{baseUrl}}/sync
 Content-Type: application/json
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 { "deviceId": "<script>", "reports": [] }
 
@@ -437,6 +446,6 @@ GET {{baseUrl}}/users
 
 ### Sign out
 POST {{baseUrl}}/auth/logout
-X-CSRF-Token: {{csrf.csrfToken}}
+X-CSRF-Token: {{csrfToken}}
 
 ?? status == 204

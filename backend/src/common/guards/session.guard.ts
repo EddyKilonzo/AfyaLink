@@ -43,7 +43,7 @@ export class SessionGuard implements CanActivate {
     } catch {
       throw new UnauthorizedException('Session expired or invalid.');
     }
-    if (this.revocations.isRevoked(payload.jti)) {
+    if (await this.revocations.isRevoked(payload.jti)) {
       throw new UnauthorizedException('Session has ended. Please sign in again.');
     }
 

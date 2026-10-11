@@ -1,6 +1,7 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, Logger } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { toHttpException } from '../errors/handle-error.js';
+import { currentRequestId } from '../request-context.js';
 
 /**
  * Last line of defence: anything not already handled is converted to a
@@ -34,6 +35,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       error: httpError.name.replace(/Exception$/, ''),
       message,
       path: request.path,
+      requestId: currentRequestId() ?? null,
       timestamp: new Date().toISOString(),
     });
   }

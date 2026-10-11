@@ -5,7 +5,9 @@ import cookieParser from 'cookie-parser';
 import type { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
+import { requestContextMiddleware } from './common/request-context.js';
 import type { AppConfig } from './config/configuration.js';
+import { setupOpenApi } from './openapi.js';
 
 /** Shared HTTP setup, also used by e2e tests so they exercise the real pipeline. */
 export function configureApp(nestApp: INestApplication): void {
@@ -19,6 +21,7 @@ export function configureApp(nestApp: INestApplication): void {
   const trustProxy = config.get('trustProxy', { infer: true });
   if (trustProxy > 0) app.set('trust proxy', trustProxy);
   app.disable('x-powered-by');
+  app.use(requestContextMiddleware);
 
   app.setGlobalPrefix('api');
 
@@ -51,7 +54,8 @@ export function configureApp(nestApp: INestApplication): void {
     origin: origins,
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'X-CSRF-Token'],
+    allowedHeaders: ['Content-Type', 'X-CSRF-Token', 'X-Request-Id'],
+    exposedHeaders: ['X-Request-Id'],
     maxAge: 600,
   });
   app.useGlobalPipes(
@@ -64,5 +68,6 @@ export function configureApp(nestApp: INestApplication): void {
     }),
   );
   app.useGlobalFilters(new AllExceptionsFilter());
+  if (!isProduction) setupOpenApi(app);
   app.enableShutdownHooks();
 }

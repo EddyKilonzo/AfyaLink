@@ -6,6 +6,7 @@ import {
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { currentRequestId } from '../request-context.js';
 
 /** MySQL / mysql2 driver error codes that mean the database cannot be reached. */
 const CONNECTION_ERROR_CODES = new Set([
@@ -46,6 +47,10 @@ export function errorCode(error: unknown): string | undefined {
  */
 export function toHttpException(error: unknown, logger: Logger, action: string): HttpException {
   if (error instanceof HttpException) return error;
+
+  // The request ID lets a reported error be matched to its log line.
+  const requestId = currentRequestId();
+  if (requestId) action = `${action} [request ${requestId}]`;
 
   const code = errorCode(error);
   if (code === 'ER_DUP_ENTRY') {

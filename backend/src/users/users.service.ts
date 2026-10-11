@@ -21,7 +21,7 @@ import type { CreateUserDto, ListUsersQueryDto, UpdateUserDto } from './dto/user
 
 export type PublicUser = Pick<
   User,
-  'id' | 'fullName' | 'email' | 'phone' | 'role' | 'locationId' | 'isActive' | 'lastLoginAt'
+  'id' | 'fullName' | 'email' | 'phone' | 'role' | 'locationId' | 'isActive' | 'mfaEnabled' | 'lastLoginAt'
 >;
 
 export function toPublicUser(user: User): PublicUser {
@@ -33,6 +33,7 @@ export function toPublicUser(user: User): PublicUser {
     role: user.role,
     locationId: user.locationId,
     isActive: user.isActive,
+    mfaEnabled: user.mfaEnabled,
     lastLoginAt: user.lastLoginAt,
   };
 }
@@ -237,6 +238,17 @@ export class UsersService {
       return await this.setPassword(id, newPassword);
     } catch (error) {
       throw toHttpException(error, this.logger, 'Change password');
+    }
+  }
+
+  /** Ends every existing session of the user (tokens issued before now are rejected). */
+  async endAllSessions(id: string): Promise<void> {
+    try {
+      this.db.assertReady();
+      await this.users.update({ id }, { tokensValidAfter: new Date() });
+      this.invalidateSession(id);
+    } catch (error) {
+      throw toHttpException(error, this.logger, 'End all sessions');
     }
   }
 

@@ -1,0 +1,656 @@
+# AfyaLink HTTP tests: hardening features.
+# Session-bound CSRF, report correction and the county policy, CSV export,
+# audit trail, sign-out everywhere, request IDs, readiness, OpenAPI, and the
+# full two-factor (TOTP) lifecycle with real codes.
+# Re-runnable: it creates its own report and user on every run.
+
+# CSRF tokens are bound to the session, so sign-in, password change and
+# logout issue a new one. This hook keeps the csrfToken variable equal to the latest
+# afya_csrf cookie the API set.
+{{+after
+  const cookies = [].concat((response && response.headers && response.headers['set-cookie']) || []);
+  const csrf = cookies.find((c) => c.startsWith('afya_csrf='));
+  if (csrf) exports.csrfToken = decodeURIComponent(csrf.split(';')[0].slice('afya_csrf='.length));
+}}
+
+# RFC 6238 TOTP, computed the same way an authenticator app does.
+{{
+  const crypto = require('crypto');
+  exports.nowStep = () => Math.floor(Date.now() / 30000);
+  exports.totpAt = (secretB32, step) => {
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    let bits = 0;
+    let value = 0;
+    const bytes = [];
+    for (const ch of secretB32.replace(/=+$/, '')) {
+      value = ((value << 5) | alphabet.indexOf(ch)) & 0xffff;
+      bits += 5;
+      if (bits >= 8) {
+        bytes.push((value >>> (bits - 8)) & 255);
+        bits -= 8;
+      }
+    }
+    const counter = Buffer.alloc(8);
+    counter.writeBigUInt64BE(BigInt(step));
+    const h = crypto.createHmac('sha1', Buffer.from(bytes)).update(counter).digest();
+    const o = h[h.length - 1] & 15;
+    return String((h.readUInt32BE(o) & 0x7fffffff) % 1000000).padStart(6, '0');
+  };
+  exports.sessionFrom = (res) => {
+    const cookies = [].concat(res.headers['set-cookie'] || []);
+    return (cookies.find((c) => c.startsWith('afya_session=')) || '').split(';')[0];
+  };
+}}
+
+@adminId = a9030f8c-37d1-4848-88b2-9f6d08e60b2a
+@mwendeId = a8a968ed-0808-48df-a2ab-a8b461ad41de
+@mwendeReviewedReportId = 571477a5-18fa-4ea2-afa9-f86a7478b573
+@ekaiReportId = 432498d9-c983-4e4c-bed4-f548f1e49273
+@runTag = {{$randomInt 100000 999999}}
+@mfaEmail = mfa.http{{runTag}}@afyalink.test
+@mfaPassword = MfaUser{{runTag}}pass
+@editId = {{$uuid}}
+
+# ---------------------------------------------------------------------------
+# Operations: readiness, OpenAPI, request IDs
+# ---------------------------------------------------------------------------
+
+### Readiness reports a connected database
+GET {{baseUrl}}/health/ready
+
+?? status == 200
+?? body status == ready
+
+### The OpenAPI document is served outside production
+GET {{baseUrl}}/docs/openapi.json
+
+?? status == 200
+?? js response.parsedBody.openapi.startsWith('3.') == true
+?? js '/api/reports/export' in response.parsedBody.paths == true
+?? js '/api/auth/mfa/setup' in response.parsedBody.paths == true
+
+### A well-formed incoming request ID is kept and echoed
+GET {{baseUrl}}/reports
+X-Request-Id: http-test-req-0001
+
+?? status == 401
+?? header x-request-id == http-test-req-0001
+?? body requestId == http-test-req-0001
+
+### A malformed request ID is replaced with a generated one
+GET {{baseUrl}}/health
+X-Request-Id: <bad id>
+
+?? status == 200
+?? js /^[0-9a-f-]{36}$/.test(response.headers['x-request-id']) == true
+
+# ---------------------------------------------------------------------------
+# Session-bound CSRF
+# ---------------------------------------------------------------------------
+
+### Anonymous CSRF token
+# @name anon
+GET {{baseUrl}}/auth/csrf
+
+?? status == 200
+
+### Signing in returns a new token bound to the new session
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "email": "chv.mwende@afyalink.test", "password": "AfyaLink#Dev2026" }
+
+{{
+  exports.chvSession1 = sessionFrom(response);
+}}
+
+?? status == 200
+?? body csrfToken exists
+?? js response.parsedBody.csrfToken !== anon.csrfToken == true
+
+### The pre-login token no longer works for the signed-in session
+POST {{baseUrl}}/sync
+Content-Type: application/json
+X-CSRF-Token: {{anon.csrfToken}}
+
+{ "reports": [] }
+
+?? status == 403
+?? body message == Invalid or missing CSRF token.
+
+### A header that matches the cookie but was minted for another session is refused
+# @noCookieJar
+POST {{baseUrl}}/sync
+Content-Type: application/json
+Cookie: {{chvSession1}}; afya_csrf={{anon.csrfToken}}
+X-CSRF-Token: {{anon.csrfToken}}
+
+{ "reports": [] }
+
+?? status == 403
+
+### The session-bound token works
+POST {{baseUrl}}/sync
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "reports": [] }
+
+?? status == 200
+
+# ---------------------------------------------------------------------------
+# Report correction and the county policy (CHV Mwende is assigned to Kitui)
+# ---------------------------------------------------------------------------
+
+### Create a report to correct (its name looks like a spreadsheet formula)
+POST {{baseUrl}}/reports
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{
+  "id": "{{editId}}",
+  "category": "DISEASE_CASE",
+  "conditionName": "=SUM(1,2)",
+  "severity": "LOW",
+  "casesCount": 1,
+  "ageGroup": "MIXED",
+  "notes": "Synthetic note to be cleared.",
+  "locationId": 1,
+  "observedAt": "{{$datetime iso8601}}",
+  "clientCreatedAt": "{{$datetime iso8601}}"
+}
+
+?? status == 201
+
+### Correct it: new count and severity, clear the notes
+PATCH {{baseUrl}}/reports/{{editId}}
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "casesCount": 5, "severity": "CRITICAL", "notes": null, "locationId": 2 }
+
+?? status == 200
+?? body casesCount == 5
+?? body severity == CRITICAL
+?? body notes isFalse
+?? body locationId == 2
+?? body status == SUBMITTED
+
+### Corrections cannot touch status, owner or ID
+PATCH {{baseUrl}}/reports/{{editId}}
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "status": "ACTIONED", "chvId": "{{adminId}}" }
+
+?? status == 400
+
+### An empty correction is rejected
+PATCH {{baseUrl}}/reports/{{editId}}
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{}
+
+?? status == 400
+
+### A correction cannot move the report outside the CHV's county
+PATCH {{baseUrl}}/reports/{{editId}}
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "locationId": 3 }
+
+?? status == 400
+?? body message == Location is outside your assigned county.
+
+### Reviewed reports can no longer be edited
+PATCH {{baseUrl}}/reports/{{mwendeReviewedReportId}}
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "casesCount": 2 }
+
+?? status == 409
+
+### Another CHV's report cannot be edited (looks like it does not exist)
+PATCH {{baseUrl}}/reports/{{ekaiReportId}}
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "casesCount": 2 }
+
+?? status == 404
+
+### New reports outside the CHV's county are rejected
+POST {{baseUrl}}/reports
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{
+  "id": "{{$uuid}}",
+  "category": "OTHER",
+  "conditionName": "Wrong county",
+  "severity": "LOW",
+  "casesCount": 1,
+  "ageGroup": "MIXED",
+  "locationId": 3,
+  "observedAt": "{{$datetime iso8601}}",
+  "clientCreatedAt": "{{$datetime iso8601}}"
+}
+
+?? status == 400
+?? body message == Location is outside your assigned county.
+
+### Sync rejects the same item with a clear reason
+POST {{baseUrl}}/sync
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{
+  "reports": [
+    {
+      "id": "{{$uuid}}",
+      "category": "OTHER",
+      "conditionName": "Wrong county",
+      "severity": "LOW",
+      "casesCount": 1,
+      "ageGroup": "MIXED",
+      "locationId": 3,
+      "observedAt": "{{$datetime iso8601}}",
+      "clientCreatedAt": "{{$datetime iso8601}}"
+    }
+  ]
+}
+
+?? status == 200
+?? js response.parsedBody.results[0].status == rejected
+?? js response.parsedBody.results[0].reason == Location is outside your assigned county.
+
+### CHVs cannot export or read the audit trail
+GET {{baseUrl}}/reports/export
+
+?? status == 403
+
+###
+GET {{baseUrl}}/audit-logs
+
+?? status == 403
+
+# ---------------------------------------------------------------------------
+# Sign out everywhere
+# ---------------------------------------------------------------------------
+
+### A second sign-in, as if from another device
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "email": "chv.mwende@afyalink.test", "password": "AfyaLink#Dev2026" }
+
+{{
+  exports.chvSession2 = sessionFrom(response);
+}}
+
+?? status == 200
+
+### Both sessions work
+# @noCookieJar
+GET {{baseUrl}}/auth/me
+Cookie: {{chvSession1}}
+
+?? status == 200
+
+### Sign out everywhere
+POST {{baseUrl}}/auth/logout-all
+X-CSRF-Token: {{csrfToken}}
+
+?? status == 204
+
+### The first device is signed out
+# @noCookieJar
+GET {{baseUrl}}/auth/me
+Cookie: {{chvSession1}}
+
+?? status == 401
+
+### The second device is signed out
+# @noCookieJar
+GET {{baseUrl}}/auth/me
+Cookie: {{chvSession2}}
+
+?? status == 401
+
+### Signing in again afterwards works
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "email": "chv.mwende@afyalink.test", "password": "AfyaLink#Dev2026" }
+
+?? status == 200
+
+###
+POST {{baseUrl}}/auth/logout
+X-CSRF-Token: {{csrfToken}}
+
+?? status == 204
+
+# ---------------------------------------------------------------------------
+# Admin: export, audit trail, and a user for the two-factor tests
+# ---------------------------------------------------------------------------
+
+### Sign in as admin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "email": "admin@afyalink.test", "password": "AfyaLink#Dev2026" }
+
+?? status == 200
+
+### Admins cannot use the CHV correction route
+PATCH {{baseUrl}}/reports/{{editId}}
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "casesCount": 9 }
+
+?? status == 403
+
+### CSV export of Mwende's reports
+GET {{baseUrl}}/reports/export?chvId={{mwendeId}}
+
+?? status == 200
+?? header content-type includes text/csv
+?? header content-disposition includes attachment
+?? js response.body.replace(/^﻿/, '').startsWith('id,observedAt,receivedAt,category') == true
+?? js response.body.includes(editId) == true
+
+### Text that looks like a formula is neutralised in the CSV
+GET {{baseUrl}}/reports/export?chvId={{mwendeId}}&severity=CRITICAL
+
+?? status == 200
+?? js response.body.includes("\"'=SUM(1,2)\"") == true
+
+### Export validates its filters
+GET {{baseUrl}}/reports/export?from=2026-10-10T00:00:00Z&to=2026-01-01T00:00:00Z
+
+?? status == 400
+
+### Create an admin account for the two-factor tests
+# @name mfaUser
+POST {{baseUrl}}/users
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "fullName": "MFA Test Admin", "email": "{{mfaEmail}}", "role": "ADMIN", "password": "{{mfaPassword}}" }
+
+?? status == 201
+?? body user.mfaEnabled == false
+
+### The audit trail recorded the correction (field names only, never content)
+GET {{baseUrl}}/audit-logs?action=report.update&targetId={{editId}}
+
+?? status == 200
+?? body total == 1
+?? js response.parsedBody.items[0].actorId == {{mwendeId}}
+?? js response.parsedBody.items[0].details.fields.includes('casesCount') == true
+?? js JSON.stringify(response.parsedBody.items[0]).includes('Synthetic note') == false
+
+### ...the export, with its filters
+GET {{baseUrl}}/audit-logs?action=report.export&actorId={{adminId}}
+
+?? status == 200
+?? js response.parsedBody.total >= 2
+?? js response.parsedBody.items.some((i) => i.details.chvId === mwendeId) == true
+
+### ...sign-out everywhere and user creation
+GET {{baseUrl}}/audit-logs?targetId={{mfaUser.user.id}}
+
+?? status == 200
+?? js response.parsedBody.items.some((i) => i.action === 'user.create' && i.actorId === adminId) == true
+
+###
+GET {{baseUrl}}/audit-logs?action=auth.logout_all&actorId={{mwendeId}}
+
+?? status == 200
+?? js response.parsedBody.total >= 1
+?? js response.parsedBody.items[0].requestId.length > 0
+
+### Audit filters are validated
+GET {{baseUrl}}/audit-logs?action=drop.tables
+
+?? status == 400
+
+### There is no way to change or delete audit entries
+DELETE {{baseUrl}}/audit-logs
+X-CSRF-Token: {{csrfToken}}
+
+?? status == 404
+
+###
+POST {{baseUrl}}/auth/logout
+X-CSRF-Token: {{csrfToken}}
+
+?? status == 204
+
+# ---------------------------------------------------------------------------
+# Two-factor sign-in (TOTP)
+# ---------------------------------------------------------------------------
+
+### The new admin signs in with a password only
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "email": "{{mfaEmail}}", "password": "{{mfaPassword}}" }
+
+?? status == 200
+
+### Setup requires the current password
+POST {{baseUrl}}/auth/mfa/setup
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "password": "WrongPassword1" }
+
+?? status == 400
+
+### Setup returns a secret and an otpauth URL for the authenticator app
+# @name mfaSetup
+POST {{baseUrl}}/auth/mfa/setup
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "password": "{{mfaPassword}}" }
+
+?? status == 200
+?? js /^[A-Z2-7]{32}$/.test(response.parsedBody.secret) == true
+?? js response.parsedBody.otpauthUrl.startsWith('otpauth://totp/AfyaLink:') == true
+
+### Enabling with a wrong code fails
+{{
+  exports.wrongCode = String((Number(totpAt(mfaSetup.secret, nowStep())) + 500000) % 1000000).padStart(6, '0');
+}}
+POST {{baseUrl}}/auth/mfa/enable
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "code": "{{wrongCode}}" }
+
+?? status == 400
+
+### Enable with the current code
+{{
+  exports.enableStep = nowStep();
+  exports.enableCode = totpAt(mfaSetup.secret, exports.enableStep);
+}}
+POST {{baseUrl}}/auth/mfa/enable
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "code": "{{enableCode}}" }
+
+?? status == 204
+
+### Setting up again while enabled is a conflict
+POST {{baseUrl}}/auth/mfa/setup
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "password": "{{mfaPassword}}" }
+
+?? status == 409
+
+### The profile shows two-factor is on
+GET {{baseUrl}}/auth/me
+
+?? status == 200
+?? body user.mfaEnabled == true
+
+###
+POST {{baseUrl}}/auth/logout
+X-CSRF-Token: {{csrfToken}}
+
+?? status == 204
+
+### Sign-in now asks for a code
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "email": "{{mfaEmail}}", "password": "{{mfaPassword}}" }
+
+?? status == 401
+?? body message == One-time code required.
+
+### A code cannot be used twice (the enable code is replayed)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "email": "{{mfaEmail}}", "password": "{{mfaPassword}}", "otp": "{{enableCode}}" }
+
+?? status == 401
+?? body message == Invalid one-time code.
+
+### A wrong password is still rejected generically, with or without a code
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "email": "{{mfaEmail}}", "password": "WrongPassword1", "otp": "123456" }
+
+?? status == 401
+?? body message == Invalid email or password.
+
+### Sign in with the next code
+{{
+  exports.loginCode = totpAt(mfaSetup.secret, enableStep + 1);
+}}
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "email": "{{mfaEmail}}", "password": "{{mfaPassword}}", "otp": "{{loginCode}}" }
+
+?? status == 200
+?? body user.mfaEnabled == true
+
+### Disabling needs a valid code
+POST {{baseUrl}}/auth/mfa/disable
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "password": "{{mfaPassword}}", "code": "{{wrongCode}}" }
+
+?? status == 400
+
+###
+POST {{baseUrl}}/auth/logout
+X-CSRF-Token: {{csrfToken}}
+
+?? status == 204
+
+### Lost device: the seed admin resets the user's two-factor
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "email": "admin@afyalink.test", "password": "AfyaLink#Dev2026" }
+
+?? status == 200
+
+###
+POST {{baseUrl}}/users/{{mfaUser.user.id}}/reset-mfa
+X-CSRF-Token: {{csrfToken}}
+
+?? status == 204
+
+###
+GET {{baseUrl}}/audit-logs?action=user.mfa_reset&targetId={{mfaUser.user.id}}
+
+?? status == 200
+?? body total == 1
+
+###
+POST {{baseUrl}}/auth/logout
+X-CSRF-Token: {{csrfToken}}
+
+?? status == 204
+
+### After the reset, a password is enough again
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "email": "{{mfaEmail}}", "password": "{{mfaPassword}}" }
+
+?? status == 200
+?? body user.mfaEnabled == false
+
+### Enrol again, then turn it off self-service
+# @name mfaSetup2
+POST {{baseUrl}}/auth/mfa/setup
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "password": "{{mfaPassword}}" }
+
+?? status == 200
+?? js response.parsedBody.secret !== mfaSetup.secret == true
+
+###
+{{
+  exports.enableStep2 = nowStep();
+}}
+POST {{baseUrl}}/auth/mfa/enable
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "code": "{{ totpAt(mfaSetup2.secret, enableStep2) }}" }
+
+?? status == 204
+
+### Disable with the password and the next code
+POST {{baseUrl}}/auth/mfa/disable
+Content-Type: application/json
+X-CSRF-Token: {{csrfToken}}
+
+{ "password": "{{mfaPassword}}", "code": "{{ totpAt(mfaSetup2.secret, enableStep2 + 1) }}" }
+
+?? status == 204
+
+###
+GET {{baseUrl}}/auth/me
+
+?? status == 200
+?? body user.mfaEnabled == false
+
+###
+POST {{baseUrl}}/auth/logout
+X-CSRF-Token: {{csrfToken}}
+
+?? status == 204

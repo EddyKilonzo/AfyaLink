@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { hkdfSync, randomBytes } from 'node:crypto';
 import { Logger } from '@nestjs/common';
 
 export interface AppConfig {
@@ -24,11 +24,44 @@ export interface AppConfig {
     sessionTtlSeconds: number;
     cookieSecure: boolean;
     maxLoginFailures: number;
+    /** Failures for one account from any IP before it locks for everyone. */
+    accountMaxFailures: number;
     lockoutMinutes: number;
+    /** 32-byte AES-256-GCM key for TOTP secrets at rest. */
+    mfaKey: Buffer;
+  };
+  mail: MailConfig;
+}
+
+/**
+ * Outgoing email. `smtp` sends for real; `log` (development default) logs a
+ * one-line summary instead of sending; `none` turns email off.
+ */
+export interface MailConfig {
+  transport: 'smtp' | 'log' | 'none';
+  /** RFC 5322 sender, e.g. `AfyaLink <no-reply@example.org>`. */
+  from: string;
+  /** Public frontend URL used for links in emails (never taken from a request). */
+  appUrl: string;
+  smtp: {
+    host: string;
+    port: number;
+    /** true = implicit TLS (port 465); false = STARTTLS, which is then required. */
+    secure: boolean;
+    user: string;
+    password: string;
   };
 }
 
 const logger = new Logger('Configuration');
+
+/** Accepts 64 hex characters or base64 that decodes to exactly 32 bytes. */
+function parseKey(value: string | undefined): Buffer | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  const key = /^[0-9a-fA-F]{64}$/.test(trimmed) ? Buffer.from(trimmed, 'hex') : Buffer.from(trimmed, 'base64');
+  return key.length === 32 ? key : null;
+}
 
 function int(value: string | undefined, fallback: number): number {
   const parsed = Number.parseInt(value ?? '', 10);
@@ -87,6 +120,17 @@ export function loadConfiguration(): AppConfig {
     jwtSecret = randomBytes(48).toString('hex');
   }
 
+  let mfaKey = parseKey(env.MFA_ENCRYPTION_KEY);
+  if (env.MFA_ENCRYPTION_KEY && !mfaKey) {
+    throw new Error('MFA_ENCRYPTION_KEY must be 32 bytes, as 64 hex characters or base64.');
+  }
+  if (!mfaKey) {
+    if (isProduction) throw new Error('MFA_ENCRYPTION_KEY must be set in production.');
+    // Development: derive a separate key from the session secret. Two-factor
+    // secrets become unreadable if the session secret changes.
+    mfaKey = Buffer.from(hkdfSync('sha256', jwtSecret, '', 'afyalink-mfa-key', 32));
+  }
+
   const fromUrl = parseDatabaseUrl(env.DATABASE_URL);
   const db: DbParts = fromUrl ?? {
     host: env.DB_HOST ?? '',
@@ -115,6 +159,8 @@ export function loadConfiguration(): AppConfig {
   }
   if (rateLimitDisabled) logger.warn('Rate limiting is DISABLED (RATE_LIMIT_DISABLED=true). Use only for local test runs.');
 
+  const mail = loadMailConfig(env, isProduction, origins[0] ?? 'http://localhost:3000');
+
   return {
     nodeEnv,
     isProduction,
@@ -133,7 +179,53 @@ export function loadConfiguration(): AppConfig {
       sessionTtlSeconds: int(env.SESSION_TTL_SECONDS, 60 * 60 * 8),
       cookieSecure,
       maxLoginFailures: int(env.LOGIN_MAX_FAILURES, 5),
+      accountMaxFailures: int(env.LOGIN_ACCOUNT_MAX_FAILURES, 25),
       lockoutMinutes: int(env.LOGIN_LOCKOUT_MINUTES, 15),
+      mfaKey,
     },
+    mail,
+  };
+}
+
+const MAIL_TRANSPORTS = ['smtp', 'log', 'none'] as const;
+// Display name and address only; CR/LF would allow header injection.
+const MAIL_FROM = /^[^\r\n<>]{0,80}<[^\s@<>]+@[^\s@<>]+>$|^[^\s@<>]+@[^\s@<>]+$/;
+
+function loadMailConfig(env: NodeJS.ProcessEnv, isProduction: boolean, defaultAppUrl: string): MailConfig {
+  const requested = env.MAIL_TRANSPORT?.trim().toLowerCase() || undefined;
+  if (requested && !(MAIL_TRANSPORTS as readonly string[]).includes(requested)) {
+    throw new Error(`MAIL_TRANSPORT must be one of ${MAIL_TRANSPORTS.join(', ')}.`);
+  }
+  const host = env.SMTP_HOST?.trim() ?? '';
+  const transport = (requested ?? (host ? 'smtp' : isProduction ? 'none' : 'log')) as MailConfig['transport'];
+
+  const from = (env.MAIL_FROM || 'AfyaLink <no-reply@afyalink.test>').trim();
+  if (!MAIL_FROM.test(from)) throw new Error('MAIL_FROM must be "Name <address@domain>" or "address@domain".');
+
+  const appUrl = (env.APP_URL || defaultAppUrl).trim().replace(/\/+$/, '');
+  try {
+    const parsed = new URL(appUrl);
+    if (isProduction && parsed.protocol !== 'https:') throw new Error('not https');
+  } catch {
+    throw new Error(isProduction ? 'APP_URL must be an https:// URL in production.' : 'APP_URL must be a valid URL.');
+  }
+
+  const port = int(env.SMTP_PORT, 587);
+  const secure = env.SMTP_SECURE ? env.SMTP_SECURE === 'true' : port === 465;
+  if (transport === 'smtp') {
+    if (!host) throw new Error('MAIL_TRANSPORT=smtp requires SMTP_HOST.');
+    if (Boolean(env.SMTP_USER) !== Boolean(env.SMTP_PASSWORD)) {
+      throw new Error('Set both SMTP_USER and SMTP_PASSWORD, or neither.');
+    }
+  }
+  if (isProduction && transport === 'log') {
+    logger.warn('MAIL_TRANSPORT=log in production: account emails are not being delivered.');
+  }
+
+  return {
+    transport,
+    from,
+    appUrl,
+    smtp: { host, port, secure, user: env.SMTP_USER || '', password: env.SMTP_PASSWORD || '' },
   };
 }

@@ -118,4 +118,33 @@ describe('AfyaLink API (e2e, no database)', () => {
     expect(res.headers['x-frame-options']).toBe('DENY');
     expect(res.headers['x-powered-by']).toBeUndefined();
   });
+
+  it('readiness answers 503 while the database is not configured', async () => {
+    const res = await request(app.getHttpServer()).get('/api/health/ready').expect(503);
+    expect(res.body.message).toMatch(/not configured/i);
+  });
+
+  it('serves the OpenAPI document outside production', async () => {
+    const res = await request(app.getHttpServer()).get('/api/docs/openapi.json').expect(200);
+    expect(Object.keys(res.body.paths)).toEqual(expect.arrayContaining(['/api/reports', '/api/audit-logs']));
+  });
+
+  it('tags every response and error with a request ID', async () => {
+    const res = await request(app.getHttpServer()).get('/api/reports').set('X-Request-Id', 'e2e-request-1').expect(401);
+    expect(res.headers['x-request-id']).toBe('e2e-request-1');
+    expect(res.body.requestId).toBe('e2e-request-1');
+  });
+
+  it('rejects an unsigned CSRF value even when cookie and header match', async () => {
+    await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .set('Cookie', 'afya_csrf=planted')
+      .set('X-CSRF-Token', 'planted')
+      .send({ email: 'chv.mwende@afyalink.test', password: 'AfyaLink#Dev2026' })
+      .expect(403);
+  });
+
+  it.each(['/api/audit-logs', '/api/reports/export'])('requires a session for %s', async (path) => {
+    await request(app.getHttpServer()).get(path).expect(401);
+  });
 });

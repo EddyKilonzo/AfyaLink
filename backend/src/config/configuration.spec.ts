@@ -7,6 +7,7 @@ describe('loadConfiguration', () => {
     SESSION_SECRET: 's'.repeat(48),
     CORS_ORIGINS: 'https://afyalink.example',
     COOKIE_SECURE: 'true',
+    MFA_ENCRYPTION_KEY: 'k'.repeat(64).replace(/k/g, 'a'),
   };
 
   afterEach(() => {
@@ -37,5 +38,54 @@ describe('loadConfiguration', () => {
   it('allows disabling rate limiting outside production', () => {
     Object.assign(process.env, { NODE_ENV: 'test', RATE_LIMIT_DISABLED: 'true' });
     expect(loadConfiguration().rateLimitEnabled).toBe(false);
+  });
+
+  it('requires a valid two-factor encryption key in production', () => {
+    Object.assign(process.env, production, { MFA_ENCRYPTION_KEY: '' });
+    expect(() => loadConfiguration()).toThrow(/MFA_ENCRYPTION_KEY/);
+    Object.assign(process.env, production, { MFA_ENCRYPTION_KEY: 'too-short' });
+    expect(() => loadConfiguration()).toThrow(/32 bytes/);
+  });
+
+  it('derives a development two-factor key when none is set', () => {
+    Object.assign(process.env, { NODE_ENV: 'development', SESSION_SECRET: 's'.repeat(48), MFA_ENCRYPTION_KEY: '' });
+    expect(loadConfiguration().auth.mfaKey).toHaveLength(32);
+  });
+
+  describe('mail', () => {
+    const dev = { NODE_ENV: 'development', SESSION_SECRET: 's'.repeat(48) };
+    const clearMail = { MAIL_TRANSPORT: '', SMTP_HOST: '', SMTP_USER: '', SMTP_PASSWORD: '', MAIL_FROM: '', APP_URL: '' };
+
+    it('logs instead of sending in development and is off in production without SMTP', () => {
+      Object.assign(process.env, dev, clearMail);
+      expect(loadConfiguration().mail.transport).toBe('log');
+      Object.assign(process.env, production, clearMail);
+      expect(loadConfiguration().mail.transport).toBe('none');
+    });
+
+    it('uses SMTP when a host is set, with STARTTLS on 587 and implicit TLS on 465', () => {
+      Object.assign(process.env, dev, clearMail, { SMTP_HOST: 'smtp.test' });
+      expect(loadConfiguration().mail.smtp).toMatchObject({ host: 'smtp.test', port: 587, secure: false });
+      Object.assign(process.env, { SMTP_PORT: '465' });
+      expect(loadConfiguration().mail.smtp.secure).toBe(true);
+    });
+
+    it('rejects incomplete or unsafe settings', () => {
+      Object.assign(process.env, dev, clearMail, { MAIL_TRANSPORT: 'smtp' });
+      expect(() => loadConfiguration()).toThrow(/SMTP_HOST/);
+      Object.assign(process.env, dev, clearMail, { SMTP_HOST: 'smtp.test', SMTP_USER: 'u' });
+      expect(() => loadConfiguration()).toThrow(/SMTP_PASSWORD/);
+      Object.assign(process.env, dev, clearMail, { MAIL_FROM: 'Eve <eve@x.test>\r\nBcc: a@b.test' });
+      expect(() => loadConfiguration()).toThrow(/MAIL_FROM/);
+      Object.assign(process.env, dev, clearMail, { MAIL_TRANSPORT: 'carrier-pigeon' });
+      expect(() => loadConfiguration()).toThrow(/MAIL_TRANSPORT/);
+      Object.assign(process.env, production, clearMail, { APP_URL: 'http://afyalink.example' });
+      expect(() => loadConfiguration()).toThrow(/APP_URL/);
+    });
+
+    it('defaults the email link base to the first CORS origin', () => {
+      Object.assign(process.env, production, clearMail);
+      expect(loadConfiguration().mail.appUrl).toBe('https://afyalink.example');
+    });
   });
 });

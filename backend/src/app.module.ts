@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AnalyticsModule } from './analytics/analytics.module.js';
+import { AuditModule } from './audit/audit.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { CsrfGuard } from './common/guards/csrf.guard.js';
 import { RolesGuard } from './common/guards/roles.guard.js';
@@ -11,6 +12,7 @@ import { loadConfiguration, type AppConfig } from './config/configuration.js';
 import { DatabaseModule } from './database/database.module.js';
 import { HealthController } from './health/health.controller.js';
 import { LocationsModule } from './locations/locations.module.js';
+import { MailModule } from './mail/mail.module.js';
 import { ReportsModule } from './reports/reports.module.js';
 import { SyncModule } from './sync/sync.module.js';
 import { UsersModule } from './users/users.module.js';
@@ -40,6 +42,8 @@ import { UsersModule } from './users/users.module.js';
       },
     }),
     DatabaseModule,
+    AuditModule,
+    MailModule,
     AuthModule,
     UsersModule,
     LocationsModule,

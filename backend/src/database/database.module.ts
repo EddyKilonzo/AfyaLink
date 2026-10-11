@@ -3,12 +3,14 @@ import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import type { AppConfig } from '../config/configuration.js';
 import { DatabaseService } from './database.service.js';
+import { AuditLog } from './entities/audit-log.entity.js';
 import { HealthReport } from './entities/health-report.entity.js';
 import { Location } from './entities/location.entity.js';
+import { RevokedSession } from './entities/revoked-session.entity.js';
 import { SyncLog } from './entities/sync-log.entity.js';
 import { User } from './entities/user.entity.js';
 
-export const ENTITIES = [User, Location, HealthReport, SyncLog];
+export const ENTITIES = [User, Location, HealthReport, SyncLog, AuditLog, RevokedSession];
 
 @Global()
 @Module({
