@@ -2,6 +2,7 @@ import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import bcrypt from 'bcryptjs';
 import { randomUUID } from 'node:crypto';
+import { BCRYPT_ROUNDS } from '../common/constants.js';
 import type { SessionUser } from '../common/decorators/auth.decorators.js';
 import { toHttpException } from '../common/errors/handle-error.js';
 import { toPublicUser, UsersService, type PublicUser } from '../users/users.service.js';
@@ -10,7 +11,7 @@ import { SessionRevocationService } from './session-revocation.service.js';
 
 // Compared against when the email is unknown so response timing does not
 // reveal which accounts exist.
-const DUMMY_HASH = bcrypt.hashSync('afyalink-timing-equaliser', 12);
+const DUMMY_HASH = bcrypt.hashSync('afyalink-timing-equaliser', BCRYPT_ROUNDS);
 
 export interface SessionPayload {
   sub: string;
