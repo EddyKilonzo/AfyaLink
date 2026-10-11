@@ -48,6 +48,10 @@ export class User {
   @Column({ name: 'last_login_at', type: 'datetime', precision: 6, nullable: true })
   lastLoginAt: Date | null;
 
+  /** Sessions issued before this instant are rejected (set on password change/reset, deactivation, role change). */
+  @Column({ name: 'tokens_valid_after', type: 'datetime', precision: 6, nullable: true })
+  tokensValidAfter: Date | null;
+
   @CreateDateColumn({ name: 'created_at', type: 'datetime', precision: 6 })
   createdAt: Date;
 

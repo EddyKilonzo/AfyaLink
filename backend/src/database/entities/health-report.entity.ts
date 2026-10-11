@@ -105,6 +105,19 @@ export class HealthReport {
   @Column({ type: 'enum', enum: ReportStatus, default: ReportStatus.SUBMITTED })
   status: ReportStatus;
 
+  @Column({ name: 'reviewed_by', type: 'char', length: 36, nullable: true })
+  reviewedById: string | null;
+
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'reviewed_by' })
+  reviewedBy?: Relation<User> | null;
+
+  @Column({ name: 'reviewed_at', type: 'datetime', precision: 6, nullable: true })
+  reviewedAt: Date | null;
+
+  @Column({ name: 'review_note', type: 'varchar', length: 500, nullable: true })
+  reviewNote: string | null;
+
   @CreateDateColumn({ name: 'received_at', type: 'datetime', precision: 6 })
   receivedAt: Date;
 
