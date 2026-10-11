@@ -10,6 +10,7 @@ import { SessionGuard } from './common/guards/session.guard.js';
 import { loadConfiguration, type AppConfig } from './config/configuration.js';
 import { DatabaseModule } from './database/database.module.js';
 import { HealthController } from './health/health.controller.js';
+import { LocationsModule } from './locations/locations.module.js';
 import { ReportsModule } from './reports/reports.module.js';
 import { SyncModule } from './sync/sync.module.js';
 import { UsersModule } from './users/users.module.js';
@@ -41,6 +42,7 @@ import { UsersModule } from './users/users.module.js';
     DatabaseModule,
     AuthModule,
     UsersModule,
+    LocationsModule,
     ReportsModule,
     AnalyticsModule,
     SyncModule,
