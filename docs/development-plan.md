@@ -13,6 +13,18 @@
 - [x] PWA foundation: manifest, conservative service worker, security headers and CSP
 - [x] Backend tests: unit and e2e
 
+## Phase 1b: Backend feature completion (done)
+
+- [x] Locations API (list for the report form and map; ADMIN create)
+- [x] Admin user management: list/search/filter, create, update, deactivate, password reset
+- [x] Self-service password change; sessions end on password change/reset, deactivation and role change
+- [x] Session guard checks current role and active flag from the database
+- [x] Report review workflow (`PATCH /reports/:id/status`, forward-only, reviewer recorded)
+- [x] Report filters (`status`, `locationId`, admin `chvId`); future-date and calendar-date validation
+- [x] Analytics: status and county breakdowns, `pendingReview`; map endpoint without free text
+- [x] Sync history (`GET /sync/logs`)
+- [x] `.http` suite covering every endpoint, run against real MySQL by `npm run test:backend:http`
+
 ## Phase 2: UI (waiting on design)
 
 The final page structure and visual design will be supplied. Until then each route renders a placeholder. Wiring checklist per route:
@@ -25,7 +37,11 @@ The final page structure and visual design will be supplied. Until then each rou
 | `/reports/new` | `ReportForm` (`features/reports`): saves to IndexedDB first, then `syncNow()` |
 | `/sync` | local queue grouped by state; `retryReport(id)`; `syncNow()`; `lastSyncAt` |
 | `/maps` | React Leaflet with reports that have coordinates; label any demo points with `DemoBadge` |
-| `/admin` | `RequireAuth roles={["ADMIN"]}`; Recharts from analytics; `usersService.list()` |
+| `/admin` | `RequireAuth roles={["ADMIN"]}`; Recharts from analytics (`byCounty`, `byStatus`, `pendingReview`); user management (`/users` CRUD + reset); report review (`PATCH /reports/:id/status`) |
+| `/maps` (data) | `GET /analytics/map` (already scoped and filtered server-side) |
+| `/reports/new` (locations) | `GET /locations` for the location picker |
+| `/sync` (history) | `GET /sync/logs` |
+| settings | `POST /auth/change-password` |
 | all private routes | wrap in `AppShell` (or the new design's equivalent), which includes `RequireAuth` |
 
 Also in this phase:
@@ -44,4 +60,5 @@ Also in this phase:
 - Shared store (Redis or MySQL) for lockout and session revocation if scaling beyond one instance.
 - HTTPS, `TRUST_PROXY`, HSTS preload review, nonce-based CSP.
 - Encrypted backups, data retention policy, audit of admin actions.
-- Admin features: review and action reports (`status` transitions), user management, password reset.
+- Admin features are implemented in the API (see Phase 1b); they still need UI.
+- Frontend `types/index.ts` and `services/` need entries for the new endpoints and fields (`reviewedById`, `reviewedAt`, `reviewNote`, map points, sync logs, users CRUD).

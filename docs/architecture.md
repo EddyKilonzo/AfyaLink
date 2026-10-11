@@ -22,11 +22,12 @@ Two independent apps share no code at runtime. Enums are mirrored by hand betwee
 | Module | Responsibility |
 | --- | --- |
 | `DatabaseModule` (global) | TypeORM DataSource with `manualInitialization`. `DatabaseService` connects in the background and retries every 15 s; `assertReady()` throws 503 while MySQL is unavailable. |
-| `AuthModule` (global) | Login/logout/me/csrf, JWT signing, `LoginAttemptsService` (lockout), `SessionRevocationService`. |
-| `UsersModule` | User lookups, admin-only listing. |
-| `ReportsModule` | List/get/create reports. `createIdempotent()` is the single write path. |
-| `SyncModule` | Batch upload with per-item results and `sync_logs` audit rows. |
-| `AnalyticsModule` | Aggregates only (counts by category, severity, day, top conditions). |
+| `AuthModule` (global) | Login/logout/me/csrf/change-password, JWT signing, `LoginAttemptsService` (lockout), `SessionRevocationService`. |
+| `UsersModule` | User lookups, session state for the guard (short cache), admin user management (list/search, create, update, deactivate, password reset). |
+| `LocationsModule` | Administrative units for the report form and the map; ADMIN create. |
+| `ReportsModule` | List/get/create reports. `createIdempotent()` is the single create path; `updateStatus()` is the ADMIN review path. |
+| `SyncModule` | Batch upload with per-item results, `sync_logs` audit rows and sync history. |
+| `AnalyticsModule` | Aggregates (category, severity, status, county, day, top conditions) and map points without free text. |
 | `HealthController` | `GET /api/health`, public, unthrottled. |
 | `common/` | Decorators (`@Public`, `@Roles`, `@CurrentUser`), guards, `toHttpException`, `AllExceptionsFilter`, pagination DTO. |
 
@@ -91,6 +92,8 @@ Two independent apps share no code at runtime. Enums are mirrored by hand betwee
 | CSRF | `SameSite=Lax` cookies, a double-submit token (HTTP-only cookie plus an in-memory header copy), and an Origin allow-list on unsafe methods. |
 | Brute force | Per-IP throttling (login 5/min) and a per-account lockout (5 failures, then 15 min). bcrypt cost 12. A dummy-hash comparison hides whether an account exists. |
 | Session replay after logout | The `jti` is revoked server-side until the token expires. |
+| Stale privileges | `SessionGuard` reads the current role and active flag from the database (10 s cache, cleared on change). `users.tokens_valid_after` ends all sessions on password change/reset, deactivation or role change. |
+| Weak or truncated passwords | Policy: 10+ characters, letters and digits, at most 72 bytes (bcrypt's input limit). |
 | Broken access control | Global `SessionGuard` and `RolesGuard`. Reports are scoped by `chvId` in queries. Other users' reports return 404, not 403. |
 | Mass assignment | DTO whitelist with `forbidNonWhitelisted`. `chvId` always comes from the session. |
 | Injection | Parameterized TypeORM queries only. SQL runner validates `DB_NAME`. |

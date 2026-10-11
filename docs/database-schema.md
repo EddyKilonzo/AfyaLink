@@ -2,7 +2,7 @@
 
 MySQL 8.0+ / MariaDB 10.5+, InnoDB, `utf8mb4_unicode_ci`. All timestamps are stored in UTC (`DATETIME(6)`, TypeORM `timezone: 'Z'`).
 
-- Schema source of truth: [`backend/database/migrations/001_initial_schema.sql`](../backend/database/migrations/001_initial_schema.sql)
+- Schema source of truth: [`backend/database/migrations/`](../backend/database/migrations/): `001_initial_schema.sql`, then `002_review_and_session_hardening.sql` (review fields and `users.tokens_valid_after`)
 - ORM mapping: `backend/src/database/entities/*.entity.ts` (`synchronize` is **off**, so the entities must match the SQL)
 - Synthetic seed data: [`backend/database/seeds/001_dev_seed.sql`](../backend/database/seeds/001_dev_seed.sql)
 
@@ -74,6 +74,7 @@ Unique: `(county, sub_county, ward, village)`.
 | `location_id` | INT UNSIGNED NULL | FK → `locations.id`, `ON DELETE SET NULL` |
 | `is_active` | TINYINT(1) | inactive users cannot sign in |
 | `last_login_at` | DATETIME(6) NULL | |
+| `tokens_valid_after` | DATETIME(6) NULL | sessions issued before this are rejected; set on password change/reset, deactivation, role change (migration 002) |
 | `created_at`, `updated_at` | DATETIME(6) | auto |
 
 ### `health_reports`
@@ -93,11 +94,14 @@ Unique: `(county, sub_county, ward, village)`.
 | `latitude`, `longitude` | DECIMAL(9,6) NULL | CHECK ranges |
 | `observed_at` | DATETIME(6) | when the CHV observed it |
 | `client_created_at` | DATETIME(6) | when it was saved on the device |
-| `status` | ENUM report status | default `SUBMITTED` |
+| `status` | ENUM report status | default `SUBMITTED`; ADMIN moves it forward only |
+| `reviewed_by` | CHAR(36) NULL | FK → `users.id`, `ON DELETE SET NULL` (migration 002) |
+| `reviewed_at` | DATETIME(6) NULL | (migration 002) |
+| `review_note` | VARCHAR(500) NULL | (migration 002) |
 | `received_at` | DATETIME(6) | server receipt time |
 | `updated_at` | DATETIME(6) | auto |
 
-Indexes: `(chv_id, observed_at)`, `(category, observed_at)`, `(location_id)`.
+Indexes: `(chv_id, observed_at)`, `(category, observed_at)`, `(location_id)`, `(status, observed_at)`.
 
 No patient names or identifiers are stored; reports are aggregate observations.
 
