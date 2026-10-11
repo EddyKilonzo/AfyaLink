@@ -1,4 +1,5 @@
-import { ArrayMaxSize, IsArray, IsObject, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsObject, IsOptional, IsString, IsUUID, Matches, MaxLength } from 'class-validator';
+import { PaginationQueryDto } from '../../common/dto/pagination.dto.js';
 
 export const MAX_SYNC_BATCH = 50;
 
@@ -25,4 +26,11 @@ export interface SyncItemResult {
   id: string | null;
   status: SyncItemStatus;
   reason?: string;
+}
+
+export class ListSyncLogsQueryDto extends PaginationQueryDto {
+  /** ADMIN only; ignored for CHVs, who always see their own history. */
+  @IsOptional()
+  @IsUUID()
+  userId?: string;
 }

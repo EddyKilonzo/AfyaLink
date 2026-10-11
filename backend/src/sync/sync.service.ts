@@ -4,12 +4,14 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { Repository } from 'typeorm';
 import type { SessionUser } from '../common/decorators/auth.decorators.js';
+import { paginate, type Paginated } from '../common/dto/pagination.dto.js';
 import { errorCode, toHttpException } from '../common/errors/handle-error.js';
 import { DatabaseService } from '../database/database.service.js';
 import { SyncLog, SyncStatus } from '../database/entities/sync-log.entity.js';
+import { UserRole } from '../database/entities/user.entity.js';
 import { CreateReportDto } from '../reports/dto/create-report.dto.js';
 import { ReportsService } from '../reports/reports.service.js';
-import type { SyncItemResult, SyncRequestDto } from './dto/sync-request.dto.js';
+import type { ListSyncLogsQueryDto, SyncItemResult, SyncRequestDto } from './dto/sync-request.dto.js';
 
 @Injectable()
 export class SyncService {
@@ -31,6 +33,23 @@ export class SyncService {
       return await this.runBatch(user, body);
     } catch (error) {
       throw toHttpException(error, this.logger, 'Sync batch');
+    }
+  }
+
+  /** Sync audit history, newest first. CHVs see their own; admins see all or one user's. */
+  async logs(user: SessionUser, query: ListSyncLogsQueryDto): Promise<Paginated<SyncLog>> {
+    try {
+      this.db.assertReady();
+      const userId = user.role === UserRole.ADMIN ? query.userId : user.id;
+      const [items, total] = await this.syncLogs.findAndCount({
+        where: userId ? { userId } : {},
+        order: { startedAt: 'DESC' },
+        skip: (query.page - 1) * query.limit,
+        take: query.limit,
+      });
+      return paginate(items, total, query.page, query.limit);
+    } catch (error) {
+      throw toHttpException(error, this.logger, 'List sync logs');
     }
   }
 
