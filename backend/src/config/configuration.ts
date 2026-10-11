@@ -9,6 +9,8 @@ export interface AppConfig {
   /** Express "trust proxy" hops; set when running behind a reverse proxy so rate limits see real client IPs. */
   trustProxy: number;
   bodyLimit: string;
+  /** False only when RATE_LIMIT_DISABLED=true outside production (automated HTTP test runs). */
+  rateLimitEnabled: boolean;
   db: {
     host: string;
     port: number;
@@ -107,6 +109,12 @@ export function loadConfiguration(): AppConfig {
     throw new Error('COOKIE_SECURE must not be false in production (session cookies require HTTPS).');
   }
 
+  const rateLimitDisabled = env.RATE_LIMIT_DISABLED === 'true';
+  if (isProduction && rateLimitDisabled) {
+    throw new Error('RATE_LIMIT_DISABLED must not be set in production.');
+  }
+  if (rateLimitDisabled) logger.warn('Rate limiting is DISABLED (RATE_LIMIT_DISABLED=true). Use only for local test runs.');
+
   return {
     nodeEnv,
     isProduction,
@@ -114,6 +122,7 @@ export function loadConfiguration(): AppConfig {
     corsOrigins: origins,
     trustProxy: int(env.TRUST_PROXY, 0),
     bodyLimit: env.BODY_LIMIT ?? '256kb',
+    rateLimitEnabled: !rateLimitDisabled,
     db: {
       ...db,
       host: db.host || 'localhost',
