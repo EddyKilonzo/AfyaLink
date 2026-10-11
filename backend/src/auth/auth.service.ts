@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { BCRYPT_ROUNDS } from '../common/constants.js';
 import type { SessionUser } from '../common/decorators/auth.decorators.js';
 import { toHttpException } from '../common/errors/handle-error.js';
+import type { User } from '../database/entities/user.entity.js';
 import { toPublicUser, UsersService, type PublicUser } from '../users/users.service.js';
 import { LoginAttemptsService } from './login-attempts.service.js';
 import { SessionRevocationService } from './session-revocation.service.js';
@@ -18,6 +19,9 @@ export interface SessionPayload {
   role: SessionUser['role'];
   email: string;
   jti?: string;
+  iat?: number;
+  /** Issue time in milliseconds, compared with users.tokens_valid_after. */
+  iatMs?: number;
   exp?: number;
 }
 
@@ -46,11 +50,7 @@ export class AuthService {
 
       this.attempts.recordSuccess(email);
       await this.users.recordLogin(user.id);
-      const token = await this.jwt.signAsync(
-        { sub: user.id, role: user.role, email: user.email },
-        { jwtid: randomUUID() },
-      );
-      return { token, user: toPublicUser(user) };
+      return { token: await this.issueToken(user), user: toPublicUser(user) };
     } catch (error) {
       throw toHttpException(error, this.logger, 'Login');
     }
@@ -67,6 +67,27 @@ export class AuthService {
     }
   }
 
+  /**
+   * Changes the caller's password. Every existing session of the user (on any
+   * device) stops working; the caller gets a fresh session token back.
+   */
+  async changePassword(
+    session: SessionUser,
+    currentToken: string | undefined,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<{ token: string; user: PublicUser }> {
+    try {
+      await this.users.changeOwnPassword(session.id, currentPassword, newPassword);
+      await this.logout(currentToken);
+      const user = await this.users.findById(session.id);
+      if (!user || !user.isActive) throw new UnauthorizedException('Account is no longer active.');
+      return { token: await this.issueToken(user), user: toPublicUser(user) };
+    } catch (error) {
+      throw toHttpException(error, this.logger, 'Change password');
+    }
+  }
+
   async me(session: SessionUser): Promise<PublicUser> {
     try {
       const user = await this.users.findById(session.id);
@@ -75,5 +96,12 @@ export class AuthService {
     } catch (error) {
       throw toHttpException(error, this.logger, 'Load current user');
     }
+  }
+
+  private issueToken(user: Pick<User, 'id' | 'role' | 'email'>): Promise<string> {
+    return this.jwt.signAsync(
+      { sub: user.id, role: user.role, email: user.email, iatMs: Date.now() },
+      { jwtid: randomUUID() },
+    );
   }
 }

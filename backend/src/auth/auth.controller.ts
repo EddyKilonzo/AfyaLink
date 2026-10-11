@@ -12,6 +12,7 @@ import {
 import { toHttpException } from '../common/errors/handle-error.js';
 import type { AppConfig } from '../config/configuration.js';
 import { AuthService } from './auth.service.js';
+import { ChangePasswordDto } from './dto/change-password.dto.js';
 import { LoginDto } from './dto/login.dto.js';
 
 @Controller('auth')
@@ -44,10 +45,7 @@ export class AuthController {
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
     try {
       const { token, user } = await this.auth.login(dto.email, dto.password);
-      res.cookie(SESSION_COOKIE, token, {
-        ...this.cookieOptions(),
-        maxAge: this.config.get('auth', { infer: true }).sessionTtlSeconds * 1000,
-      });
+      this.setSessionCookie(res, token);
       return { user };
     } catch (error) {
       throw toHttpException(error, this.logger, 'POST /auth/login');
@@ -74,6 +72,33 @@ export class AuthController {
     } catch (error) {
       throw toHttpException(error, this.logger, 'GET /auth/me');
     }
+  }
+
+  /** Requires the current password. Signs out every other session and issues a new cookie. */
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  async changePassword(
+    @CurrentUser() session: SessionUser,
+    @Body() dto: ChangePasswordDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    try {
+      const current = (req.cookies as Record<string, string> | undefined)?.[SESSION_COOKIE];
+      const { token, user } = await this.auth.changePassword(session, current, dto.currentPassword, dto.newPassword);
+      this.setSessionCookie(res, token);
+      return { user };
+    } catch (error) {
+      throw toHttpException(error, this.logger, 'POST /auth/change-password');
+    }
+  }
+
+  private setSessionCookie(res: Response, token: string): void {
+    res.cookie(SESSION_COOKIE, token, {
+      ...this.cookieOptions(),
+      maxAge: this.config.get('auth', { infer: true }).sessionTtlSeconds * 1000,
+    });
   }
 
   private cookieOptions(): CookieOptions {
