@@ -24,6 +24,10 @@ export const reportFormSchema = z
       .min(1, "When was this observed?")
       .refine((v) => !Number.isNaN(Date.parse(v)), "Enter a valid date and time.")
       .refine((v) => Date.parse(v) <= Date.now() + 5 * 60_000, "This cannot be in the future."),
+    locationId: z.preprocess(
+      (v) => (v === "" || v === null || v === undefined ? undefined : Number(v)),
+      z.number({ message: "Choose an area." }).int().positive().optional(),
+    ),
     latitude: z.number().min(-90).max(90).optional(),
     longitude: z.number().min(-180).max(180).optional(),
   })

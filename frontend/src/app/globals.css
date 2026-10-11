@@ -1,67 +1,429 @@
 @import "tailwindcss";
 
 /*
- * AfyaLink design tokens. A calm clinical teal for primary actions, warm
- * neutrals for surfaces, and reserved signal colours for sync and severity
- * states so they stay meaningful.
+ * AfyaLink design tokens.
+ *
+ * Forest green carries identity and primary actions; deep green is for dense
+ * brand surfaces; mint is the quiet tint; amber is a rare highlight (never body
+ * text). Sync and severity colours are reserved for state and always ship with
+ * an icon and a text label. All text pairs below meet WCAG AA.
  */
 @theme inline {
-  --font-sans: var(--font-sans-app), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-display-app), var(--font-sans-app), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
 
-  --color-canvas: #f6f5f1;
+  /* Surfaces & ink */
+  --color-canvas: #f7f9f7;
   --color-surface: #ffffff;
-  --color-ink: #13221f;
-  --color-muted: #5b6b67;
-  --color-line: #e3e1d9;
+  --color-sunken: #eff4f1;
+  --color-ink: #172522;
+  --color-muted: #687873;
+  --color-line: #e3eae6;
+  --color-line-strong: #cfdad4;
 
-  --color-brand-50: #ecf7f4;
-  --color-brand-100: #d2ede6;
-  --color-brand-200: #a6dacd;
-  --color-brand-500: #13806b;
-  --color-brand-600: #0e6a59;
-  --color-brand-700: #0b5447;
-  --color-brand-900: #07332b;
+  /* Brand ramp (600 = forest #146C5A, 900 = deep #0B3D35, 100 = mint #DDF5EA) */
+  --color-brand-50: #eef9f3;
+  --color-brand-100: #ddf5ea;
+  --color-brand-200: #b7e6d1;
+  --color-brand-300: #80cfb1;
+  --color-brand-400: #3fae8c;
+  --color-brand-500: #1d8a70;
+  --color-brand-600: #146c5a;
+  --color-brand-700: #10584a;
+  --color-brand-800: #0d483d;
+  --color-brand-900: #0b3d35;
+  --color-brand-950: #072a24;
 
-  --color-pending: #b45309;
-  --color-pending-bg: #fef3c7;
-  --color-syncing: #1d4ed8;
-  --color-syncing-bg: #dbeafe;
-  --color-synced: #047857;
-  --color-synced-bg: #d1fae5;
-  --color-failed: #b91c1c;
-  --color-failed-bg: #fee2e2;
+  --color-amber: #f3b66a;
+  --color-amber-soft: #fdf1df;
+  --color-amber-ink: #85560f;
 
+  --color-success: #21865b;
+  --color-error: #c43d4b;
+
+  /* Sync states (text on its own background ≥ 4.5:1) */
+  --color-pending: #85560f;
+  --color-pending-bg: #fdf1df;
+  --color-syncing: #22609f;
+  --color-syncing-bg: #e4eef9;
+  --color-synced: #1a6e4a;
+  --color-synced-bg: #ddf5ea;
+  --color-failed: #b3343f;
+  --color-failed-bg: #fbe7e9;
+
+  /* Severity marks */
   --color-sev-low: #4d7c0f;
   --color-sev-moderate: #b45309;
   --color-sev-high: #c2410c;
   --color-sev-critical: #b91c1c;
+
+  /* Radii: small controls → large brand surfaces */
+  /* Crisp for controls, softer for large surfaces; never pill-shaped by default. */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 22px;
+
+  /* Elevation: layered, green-tinted, never a flat grey blur */
+  --shadow-xs: 0 1px 2px rgb(11 61 53 / 0.06);
+  --shadow-sm: 0 1px 2px rgb(11 61 53 / 0.05), 0 2px 8px -2px rgb(11 61 53 / 0.08);
+  --shadow-md: 0 1px 2px rgb(11 61 53 / 0.05), 0 8px 20px -6px rgb(11 61 53 / 0.12), 0 2px 6px -2px rgb(11 61 53 / 0.06);
+  --shadow-lg: 0 2px 4px rgb(11 61 53 / 0.04), 0 18px 44px -14px rgb(11 61 53 / 0.22), 0 6px 14px -6px rgb(11 61 53 / 0.08);
+  --shadow-xl: 0 2px 6px rgb(11 61 53 / 0.05), 0 32px 72px -20px rgb(11 61 53 / 0.32), 0 10px 24px -10px rgb(11 61 53 / 0.14);
+  --shadow-ring: 0 0 0 1px rgb(11 61 53 / 0.06);
+  /* Cards and base surfaces: hairline ring + contact shadow + soft ambient lift. */
+  --shadow-card: 0 0 0 1px rgb(11 61 53 / 0.055), 0 1px 2px rgb(11 61 53 / 0.06), 0 4px 10px -4px rgb(11 61 53 / 0.08), 0 16px 32px -20px rgb(11 61 53 / 0.18);
+  --shadow-card-hover: 0 0 0 1px rgb(11 61 53 / 0.07), 0 2px 4px rgb(11 61 53 / 0.06), 0 10px 20px -8px rgb(11 61 53 / 0.14), 0 28px 48px -24px rgb(11 61 53 / 0.26);
+  --shadow-glow: 0 0 0 4px rgb(20 108 90 / 0.14);
+
+  /* Global ambient shadow: layered, soft, never a flat grey blur. */
+  --shadow-ambient: rgba(0, 0, 0, 0.25) 0px 54px 55px, rgba(0, 0, 0, 0.12) 0px -12px 30px, rgba(0, 0, 0, 0.12) 0px 4px 6px, rgba(0, 0, 0, 0.17) 0px 12px 13px, rgba(0, 0, 0, 0.09) 0px -3px 5px;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.42, 0, 0.58, 1);
+  --ease-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-emphasize: cubic-bezier(0.16, 1, 0.3, 1);
+  --spring: 380 28 0 1;
+  --duration-micro: 140ms;
+  --duration-ui: 220ms;
+  --duration-section: 520ms;
+  --duration-page: 420ms;
+
+  --animate-float: float 9s var(--ease-standard) infinite alternate;
+  --animate-pulse-soft: pulse-soft 2.4s var(--ease-standard) infinite;
 }
 
 :root {
   color-scheme: light;
 }
 
-html,
-body {
+/* ---------- Dark mode ---------- */
+/* A calm, warm-dark palette: deep forest surfaces, off-white ink, mint accents.
+   Only the surfaces, ink and line tokens swap; the brand ramp, state colours
+   and severity marks stay the same (they already carry their own contrast). */
+.dark {
+  color-scheme: dark;
+  --color-canvas: #0b1613;
+  --color-surface: #12211c;
+  --color-sunken: #0e1c18;
+  --color-ink: #eaf4f0;
+  --color-muted: #8aa099;
+  --color-line: #1f332d;
+  --color-line-strong: #2a453d;
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-sm: 0 2px 8px -4px rgb(0 0 0 / 0.5), 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 8px 24px -8px rgb(0 0 0 / 0.55), 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 18px 44px -14px rgb(0 0 0 / 0.65), 0 2px 4px rgb(0 0 0 / 0.4);
+  --shadow-xl: 0 32px 72px -20px rgb(0 0 0 / 0.75), 0 2px 6px rgb(0 0 0 / 0.4);
+  --shadow-ring: 0 0 0 1px rgb(255 255 255 / 0.08);
+  --shadow-card: 0 0 0 1px rgb(255 255 255 / 0.06), 0 2px 8px -4px rgb(0 0 0 / 0.5), 0 16px 32px -20px rgb(0 0 0 / 0.6);
+  --shadow-card-hover: 0 0 0 1px rgb(255 255 255 / 0.09), 0 10px 24px -8px rgb(0 0 0 / 0.6), 0 28px 48px -24px rgb(0 0 0 / 0.7);
+  --shadow-glow: 0 0 0 4px rgb(20 108 90 / 0.28);
+
+  /* Light end of the brand ramp: used as "highlight" tints on surfaces.
+     In dark mode these shift darker so a mint tint still reads as a tint. */
+  --color-brand-50: #0f1c18;
+  --color-brand-100: #153029;
+  --color-brand-200: #1c4a3f;
+}
+
+html {
+  scroll-padding-top: 5rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Canvas colour lives on <html>; <body> stays transparent so the fixed
+   honeycomb layer (z-index -10) shows through behind every page. */
+html {
   background: var(--color-canvas);
+}
+
+body {
   color: var(--color-ink);
+  box-shadow: var(--shadow-ambient);
 }
 
 body {
   font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
   -webkit-tap-highlight-color: transparent;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-brand-200);
+  color: var(--color-brand-950);
 }
 
 :focus-visible {
   outline: 2px solid var(--color-brand-500);
   outline-offset: 2px;
+  border-radius: 4px;
 }
 
-/* Leaflet sits inside rounded cards; keep its controls below app overlays. */
+/* ---------- Press feedback ---------- */
+/* A springy, slightly-lowered press for any interactive surface. Apply to
+   buttons, links, rows, cards: the transform is cheap (only opacity+translate)
+   and the spring keeps it from feeling dead. */
+.press {
+  transition: transform var(--duration-micro) var(--ease-emphasize),
+    background-color var(--duration-ui) var(--ease-standard),
+    box-shadow var(--duration-ui) var(--ease-standard);
+  will-change: transform;
+}
+.press:hover { transform: translateY(-1px); }
+.press:active { transform: translateY(2px) scale(0.99); transition-duration: 75ms; }
+.press:focus-visible { outline: none; }
+
+/* A lift on hover for cards that are links. */
+.press-lift {
+  transition: transform var(--duration-ui) var(--ease-emphasize),
+    box-shadow var(--duration-ui) var(--ease-standard),
+    background-color var(--duration-ui) var(--ease-standard);
+  will-change: transform, box-shadow;
+}
+.press-lift:hover { transform: translateY(-2px) scale(1.004); }
+
+/* ---------- Scrollbar ---------- */
+
+/* Thin, brand-tinted scrollbar that matches the honeycomb palette. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-brand-600);
+  background-clip: padding-box;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+
+/* ---------- Type scale (fluid, capped on small screens) ---------- */
+
+@utility text-display {
+  font-size: clamp(2.375rem, 1.55rem + 3.9vw, 4.5rem);
+  line-height: 1.02;
+  letter-spacing: -0.038em;
+  font-weight: 620;
+  text-wrap: balance;
+}
+
+@utility text-h2 {
+  font-size: clamp(1.75rem, 1.3rem + 2vw, 2.75rem);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+@utility text-h1 {
+  font-size: clamp(1.5rem, 1.25rem + 1.1vw, 2rem);
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  font-weight: 600;
+}
+
+@utility text-h3 {
+  font-size: 1.0625rem;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  font-weight: 600;
+}
+
+@utility text-lead {
+  font-size: clamp(1.0625rem, 0.98rem + 0.4vw, 1.25rem);
+  line-height: 1.55;
+  letter-spacing: -0.006em;
+}
+
+@utility text-metric {
+  font-size: clamp(1.75rem, 1.5rem + 1vw, 2.25rem);
+  line-height: 1;
+  letter-spacing: -0.035em;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+@utility text-label {
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  font-weight: 500;
+  color: var(--color-muted);
+}
+
+/* ---------- Surfaces ---------- */
+
+/* Clickable cards: lift on hover, settle on press. */
+@utility hover-lift {
+  transition:
+    transform var(--duration-ui) var(--ease-out),
+    box-shadow var(--duration-ui) var(--ease-out);
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card-hover);
+  }
+  &:active {
+    transform: translateY(0) scale(0.995);
+  }
+}
+
+@utility surface-raised {
+  background: var(--color-surface);
+  box-shadow: var(--shadow-ring), var(--shadow-sm);
+  border-radius: var(--radius-xl);
+}
+
+/* ---------- Keyframes ---------- */
+
+@keyframes float {
+  from {
+    transform: translate3d(0, -6px, 0);
+  }
+  to {
+    transform: translate3d(0, 6px, 0);
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(33 134 91 / 0.35);
+  }
+  60% {
+    box-shadow: 0 0 0 6px rgb(33 134 91 / 0);
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+
+/* Leaflet sits inside rounded panels; keep its controls below app overlays. */
 .leaflet-container {
   font-family: var(--font-sans);
   z-index: 0;
+  background: #eef2ef;
+}
+
+.leaflet-tile-pane {
+  filter: saturate(0.55) contrast(0.95) brightness(1.03);
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.leaflet-popup-content {
+  margin: 12px 14px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.leaflet-control-zoom a {
+  color: var(--color-ink) !important;
+}
+
+/* Page-load entrance that needs no JavaScript (used above the fold). */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-rise {
+  animation: rise var(--duration-section) var(--ease-out) both;
+}
+
+/* Hero outlines trace themselves in once. */
+.border-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: border-draw 1.6s var(--ease-out) forwards;
+}
+
+@keyframes border-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Hex texture: a few cells breathe slowly. Decorative; frozen with reduced motion. */
+.hex-glow {
+  opacity: 0;
+  animation: hex-glow 7s var(--ease-standard) infinite;
+}
+
+@keyframes hex-glow {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  35%,
+  55% {
+    opacity: 1;
+  }
+}
+
+/* Toast countdown bar; its animationend dismisses the toast. */
+.toast-timer {
+  animation: toast-timer var(--toast-duration, 4500ms) linear forwards;
+}
+
+@keyframes toast-timer {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -69,6 +431,21 @@ body {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .hex-glow {
+    opacity: 0.6;
+  }
+
+  .border-draw {
+    stroke-dashoffset: 0;
+  }
+
+  /* A timer, not decoration: keep its real duration so toasts stay readable. */
+  .toast-timer {
+    animation-duration: var(--toast-duration, 4500ms) !important;
   }
 }

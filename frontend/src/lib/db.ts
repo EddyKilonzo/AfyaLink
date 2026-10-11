@@ -43,6 +43,11 @@ class AfyaLinkDB extends Dexie {
 
 let instance: AfyaLinkDB | null = null;
 
+/** Test hook: drop the cached connection so the next getDb() reopens fresh. */
+export function __resetDb() {
+  instance = null;
+}
+
 /** Lazily opened so server rendering never touches IndexedDB. */
 export function getDb(): AfyaLinkDB {
   if (typeof indexedDB === "undefined") {

@@ -34,6 +34,7 @@ function toPayload(report: LocalReport): ReportPayload {
     ageGroup: report.ageGroup,
     symptoms: report.symptoms?.length ? report.symptoms : undefined,
     notes: report.notes || undefined,
+    locationId: report.locationId,
     latitude: report.latitude,
     longitude: report.longitude,
     observedAt: report.observedAt,
@@ -88,6 +89,34 @@ export async function retryReport(id: string): Promise<void> {
     lastError: null,
     updatedAt: Date.now(),
   });
+}
+
+/**
+ * Deletes a report that never reached the server (e.g. rejected by validation).
+ * Refuses synced or in-flight reports so server data is never orphaned locally.
+ */
+export async function discardLocalReport(id: string, ownerId: string): Promise<void> {
+  const db = getDb();
+  await db.transaction("rw", db.reports, async () => {
+    const report = await db.reports.get(id);
+    if (!report || report.ownerId !== ownerId) return;
+    if (report.syncState === "synced" || report.syncState === "syncing") {
+      throw new Error("Only reports that have not been sent can be discarded.");
+    }
+    await db.reports.delete(id);
+  });
+}
+
+/**
+ * Removes this user's already-confirmed reports from the device (on sign-out),
+ * so health data does not linger on shared phones. Unsynced work is kept.
+ */
+export async function purgeSyncedReports(ownerId: string): Promise<void> {
+  try {
+    await getDb().reports.where("[ownerId+syncState]").equals([ownerId, "synced"]).delete();
+  } catch (error) {
+    console.warn("[AfyaLink] Could not clear synced reports from this device.", error);
+  }
 }
 
 /**
