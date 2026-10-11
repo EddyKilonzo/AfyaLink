@@ -1,0 +1,442 @@
+# AfyaLink HTTP tests: a CHV's reports, offline sync, analytics and map.
+# Re-runnable: every report it creates uses a fresh UUID.
+
+@mwendeId = a8a968ed-0808-48df-a2ab-a8b461ad41de
+@ekaiId = a04a8d2f-bc61-4b10-b0d0-8d97891eb97b
+@ekaiReportId = 432498d9-c983-4e4c-bed4-f548f1e49273
+@reportId = {{$uuid}}
+@syncId1 = {{$uuid}}
+@syncId2 = {{$uuid}}
+
+### CSRF token
+# @name csrf
+GET {{baseUrl}}/auth/csrf
+
+?? status == 200
+
+### Sign in as CHV Mwende
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "email": "chv.mwende@afyalink.test", "password": "AfyaLink#Dev2026" }
+
+?? status == 200
+?? body user.id == {{mwendeId}}
+
+### Locations for the report form
+GET {{baseUrl}}/locations
+
+?? status == 200
+?? js response.parsedBody.items.length >= 5
+?? js typeof response.parsedBody.items[0].county == string
+
+### Locations filtered by county
+GET {{baseUrl}}/locations?county=Kitui
+
+?? status == 200
+?? js response.parsedBody.items.length >= 1
+?? js response.parsedBody.items.every((l) => l.county === 'Kitui') == true
+
+### CHVs cannot create locations
+POST {{baseUrl}}/locations
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "county": "Kitui", "subCounty": "Kitui West", "ward": "Matinyani" }
+
+?? status == 403
+
+### Create a report (client-generated UUID)
+POST {{baseUrl}}/reports
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{
+  "id": "{{reportId}}",
+  "category": "DISEASE_CASE",
+  "conditionName": "  Cholera (suspected)  ",
+  "severity": "HIGH",
+  "casesCount": 3,
+  "ageGroup": "MIXED",
+  "symptoms": ["diarrhoea", "vomiting"],
+  "notes": "Synthetic HTTP test report.",
+  "locationId": 1,
+  "latitude": -1.3672,
+  "longitude": 38.0105,
+  "observedAt": "{{$datetime iso8601}}",
+  "clientCreatedAt": "{{$datetime iso8601}}"
+}
+
+?? status == 201
+?? body outcome == created
+?? body report.id == {{reportId}}
+?? body report.chvId == {{mwendeId}}
+?? body report.status == SUBMITTED
+?? body report.conditionName == Cholera (suspected)
+
+### Retrying the same report is idempotent (200 duplicate, no new row)
+POST {{baseUrl}}/reports
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{
+  "id": "{{reportId}}",
+  "category": "DISEASE_CASE",
+  "conditionName": "Cholera (suspected)",
+  "severity": "HIGH",
+  "casesCount": 3,
+  "ageGroup": "MIXED",
+  "observedAt": "{{$datetime iso8601}}",
+  "clientCreatedAt": "{{$datetime iso8601}}"
+}
+
+?? status == 200
+?? body outcome == duplicate
+?? body report.id == {{reportId}}
+
+### Reusing another CHV's report ID is a conflict
+POST {{baseUrl}}/reports
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{
+  "id": "{{ekaiReportId}}",
+  "category": "NUTRITION",
+  "conditionName": "Overwrite attempt",
+  "severity": "LOW",
+  "casesCount": 1,
+  "ageGroup": "MIXED",
+  "observedAt": "{{$datetime iso8601}}",
+  "clientCreatedAt": "{{$datetime iso8601}}"
+}
+
+?? status == 409
+
+### Mass assignment: chvId and status cannot be set by the client
+POST {{baseUrl}}/reports
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{
+  "id": "{{$uuid}}",
+  "chvId": "{{ekaiId}}",
+  "status": "ACTIONED",
+  "category": "OTHER",
+  "conditionName": "Mass assignment",
+  "severity": "LOW",
+  "casesCount": 1,
+  "ageGroup": "MIXED",
+  "observedAt": "{{$datetime iso8601}}",
+  "clientCreatedAt": "{{$datetime iso8601}}"
+}
+
+?? status == 400
+?? js JSON.stringify(response.parsedBody.message).includes('chvId') == true
+
+### Future observation dates are rejected
+POST {{baseUrl}}/reports
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{
+  "id": "{{$uuid}}",
+  "category": "OTHER",
+  "conditionName": "Future",
+  "severity": "LOW",
+  "casesCount": 1,
+  "ageGroup": "MIXED",
+  "observedAt": "2099-01-01T00:00:00Z",
+  "clientCreatedAt": "{{$datetime iso8601}}"
+}
+
+?? status == 400
+?? js JSON.stringify(response.parsedBody.message).includes('observedAt must not be in the future') == true
+
+### Invalid enums, counts, coordinates and ID are rejected
+POST {{baseUrl}}/reports
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{
+  "id": "not-a-uuid",
+  "category": "ALIENS",
+  "conditionName": "x",
+  "severity": "MEH",
+  "casesCount": 0,
+  "ageGroup": "OLD",
+  "latitude": 120,
+  "observedAt": "yesterday",
+  "clientCreatedAt": "{{$datetime iso8601}}"
+}
+
+?? status == 400
+?? js response.parsedBody.message.length >= 7
+
+### Unknown location is rejected by the database foreign key (400, not 500)
+POST {{baseUrl}}/reports
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{
+  "id": "{{$uuid}}",
+  "category": "OTHER",
+  "conditionName": "Bad location",
+  "severity": "LOW",
+  "casesCount": 1,
+  "ageGroup": "MIXED",
+  "locationId": 999999,
+  "observedAt": "{{$datetime iso8601}}",
+  "clientCreatedAt": "{{$datetime iso8601}}"
+}
+
+?? status == 400
+
+### Creating without CSRF is refused
+POST {{baseUrl}}/reports
+Content-Type: application/json
+
+{}
+
+?? status == 403
+
+### A CHV lists only their own reports
+GET {{baseUrl}}/reports?limit=100
+
+?? status == 200
+?? js response.parsedBody.total >= 1
+?? js response.parsedBody.items.every((r) => r.chvId === mwendeId) == true
+?? js response.parsedBody.items.some((r) => r.id === reportId) == true
+
+### Filters: category, severity, status, location
+GET {{baseUrl}}/reports?category=DISEASE_CASE&severity=HIGH&status=SUBMITTED&locationId=1
+
+?? status == 200
+?? js response.parsedBody.items.length >= 1
+?? js response.parsedBody.items.every((r) => r.category === 'DISEASE_CASE' && r.severity === 'HIGH' && r.status === 'SUBMITTED' && r.locationId === 1) == true
+
+### A CHV cannot widen scope with chvId
+GET {{baseUrl}}/reports?chvId={{ekaiId}}
+
+?? status == 200
+?? js response.parsedBody.items.every((r) => r.chvId === mwendeId) == true
+
+### Inverted date range is rejected
+GET {{baseUrl}}/reports?from=2026-10-10T00:00:00Z&to=2026-01-01T00:00:00Z
+
+?? status == 400
+
+### Page size is capped at 100
+GET {{baseUrl}}/reports?limit=1000
+
+?? status == 400
+
+### Unknown query parameters are rejected
+GET {{baseUrl}}/reports?sort=chvId
+
+?? status == 400
+
+### Read own report
+GET {{baseUrl}}/reports/{{reportId}}
+
+?? status == 200
+?? body id == {{reportId}}
+
+### Another CHV's report looks like it does not exist
+GET {{baseUrl}}/reports/{{ekaiReportId}}
+
+?? status == 404
+
+### Report IDs must be UUIDs
+GET {{baseUrl}}/reports/1%20OR%201=1
+
+?? status == 400
+
+### CHVs cannot review reports
+PATCH {{baseUrl}}/reports/{{reportId}}/status
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "status": "REVIEWED" }
+
+?? status == 403
+
+### Offline sync: new, retried and invalid reports in one batch
+POST {{baseUrl}}/sync
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{
+  "deviceId": "http-test-device",
+  "reports": [
+    {
+      "id": "{{syncId1}}",
+      "category": "NUTRITION",
+      "conditionName": "Moderate acute malnutrition",
+      "severity": "MODERATE",
+      "casesCount": 2,
+      "ageGroup": "UNDER_5",
+      "locationId": 2,
+      "observedAt": "{{$datetime iso8601}}",
+      "clientCreatedAt": "{{$datetime iso8601}}"
+    },
+    {
+      "id": "{{reportId}}",
+      "category": "DISEASE_CASE",
+      "conditionName": "Cholera (suspected)",
+      "severity": "HIGH",
+      "casesCount": 3,
+      "ageGroup": "MIXED",
+      "observedAt": "{{$datetime iso8601}}",
+      "clientCreatedAt": "{{$datetime iso8601}}"
+    },
+    {
+      "id": "{{syncId2}}",
+      "category": "NOPE",
+      "conditionName": "Broken",
+      "severity": "LOW",
+      "casesCount": 0,
+      "ageGroup": "MIXED",
+      "observedAt": "{{$datetime iso8601}}",
+      "clientCreatedAt": "{{$datetime iso8601}}"
+    }
+  ]
+}
+
+?? status == 200
+?? body status == PARTIAL
+?? body summary.received == 3
+?? body summary.created == 1
+?? body summary.duplicates == 1
+?? body summary.rejected == 1
+?? js response.parsedBody.results[0].status == created
+?? js response.parsedBody.results[1].status == duplicate
+?? js response.parsedBody.results[2].status == rejected
+?? js /casesCount|category/.test(response.parsedBody.results[2].reason) == true
+
+### Re-sending the same report creates nothing new
+POST {{baseUrl}}/sync
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{
+  "deviceId": "http-test-device",
+  "reports": [
+    {
+      "id": "{{syncId1}}",
+      "category": "NUTRITION",
+      "conditionName": "Moderate acute malnutrition",
+      "severity": "MODERATE",
+      "casesCount": 2,
+      "ageGroup": "UNDER_5",
+      "observedAt": "{{$datetime iso8601}}",
+      "clientCreatedAt": "{{$datetime iso8601}}"
+    }
+  ]
+}
+
+?? status == 200
+?? body status == SUCCESS
+?? body summary.created == 0
+?? body summary.duplicates == 1
+
+### Sync cannot claim another CHV's report ID
+POST {{baseUrl}}/sync
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{
+  "reports": [
+    {
+      "id": "{{ekaiReportId}}",
+      "category": "NUTRITION",
+      "conditionName": "Hijack",
+      "severity": "LOW",
+      "casesCount": 1,
+      "ageGroup": "MIXED",
+      "observedAt": "{{$datetime iso8601}}",
+      "clientCreatedAt": "{{$datetime iso8601}}"
+    }
+  ]
+}
+
+?? status == 200
+?? body status == FAILED
+?? js response.parsedBody.results[0].status == rejected
+
+### Batches are capped at 50 reports
+POST {{baseUrl}}/sync
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "reports": {{ JSON.stringify(Array.from({ length: 51 }, () => ({}))) }} }
+
+?? status == 400
+
+### deviceId is restricted to a safe character set
+POST {{baseUrl}}/sync
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "deviceId": "<script>", "reports": [] }
+
+?? status == 400
+
+### Sync history shows only this CHV's batches (counts, no report content)
+GET {{baseUrl}}/sync/logs
+
+?? status == 200
+?? js response.parsedBody.total >= 3
+?? js response.parsedBody.items.every((l) => l.userId === mwendeId) == true
+?? js response.parsedBody.items.some((l) => l.deviceId === 'http-test-device' && l.status === 'PARTIAL') == true
+
+### A CHV cannot read another user's sync history
+GET {{baseUrl}}/sync/logs?userId={{ekaiId}}
+
+?? status == 200
+?? js response.parsedBody.items.every((l) => l.userId === mwendeId) == true
+
+### Analytics are scoped to the CHV
+GET {{baseUrl}}/analytics/summary?days=30
+
+?? status == 200
+?? body scope == own
+?? body periodDays == 30
+?? js response.parsedBody.totals.reports >= 2
+?? js Array.isArray(response.parsedBody.byCounty) == true
+?? js Array.isArray(response.parsedBody.byStatus) == true
+?? js typeof response.parsedBody.pendingReview == number
+
+### Analytics period is validated
+GET {{baseUrl}}/analytics/summary?days=0
+
+?? status == 400
+
+### Map points: own reports only, with coordinates, and no free-text notes
+GET {{baseUrl}}/analytics/map?days=30
+
+?? status == 200
+?? body scope == own
+?? js response.parsedBody.points.some((p) => p.id === reportId) == true
+?? js response.parsedBody.points.some((p) => p.id === syncId1) == true
+?? js response.parsedBody.points.every((p) => typeof p.latitude === 'number' && typeof p.longitude === 'number') == true
+?? js response.parsedBody.points.every((p) => !('notes' in p) && !('symptoms' in p) && !('chvId' in p)) == true
+
+### Map category filter
+GET {{baseUrl}}/analytics/map?category=NUTRITION
+
+?? status == 200
+?? js response.parsedBody.points.length >= 1
+?? js response.parsedBody.points.every((p) => p.category === 'NUTRITION') == true
+
+### CHVs cannot manage users
+GET {{baseUrl}}/users
+
+?? status == 403
+
+### Sign out
+POST {{baseUrl}}/auth/logout
+X-CSRF-Token: {{csrf.csrfToken}}
+
+?? status == 204

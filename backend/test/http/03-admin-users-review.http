@@ -1,0 +1,643 @@
+# AfyaLink HTTP tests: administration.
+# User management, locations, admin-wide reporting, report review, password
+# change and reset, deactivation, and account lockout.
+# Re-runnable: it creates a fresh CHV account and location on every run.
+
+@adminId = a9030f8c-37d1-4848-88b2-9f6d08e60b2a
+@mwendeId = a8a968ed-0808-48df-a2ab-a8b461ad41de
+@ekaiId = a04a8d2f-bc61-4b10-b0d0-8d97891eb97b
+@runTag = {{$randomInt 100000 999999}}
+@newEmail = chv.http{{runTag}}@afyalink.test
+@initialPassword = Initial{{runTag}}pass
+@changedPassword = Changed{{runTag}}pass
+@resetPassword = Reset{{runTag}}pass
+@reviewReportId = {{$uuid}}
+
+### CSRF token
+# @name csrf
+GET {{baseUrl}}/auth/csrf
+
+?? status == 200
+
+### Sign in as admin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "email": "admin@afyalink.test", "password": "AfyaLink#Dev2026" }
+
+?? status == 200
+?? body user.role == ADMIN
+
+# ---------------------------------------------------------------------------
+# Users
+# ---------------------------------------------------------------------------
+
+### List users (never exposes password hashes)
+GET {{baseUrl}}/users
+
+?? status == 200
+?? js response.parsedBody.total >= 3
+?? js response.parsedBody.items.every((u) => !('passwordHash' in u)) == true
+
+### Filter by role and search text
+GET {{baseUrl}}/users?role=CHV&q=mwende
+
+?? status == 200
+?? body total == 1
+?? js response.parsedBody.items[0].id == {{mwendeId}}
+
+### Search treats % and _ literally (no LIKE wildcard injection)
+GET {{baseUrl}}/users?q=%25
+
+?? status == 200
+?? body total == 0
+
+### Filter by active flag
+GET {{baseUrl}}/users?isActive=true&limit=100
+
+?? status == 200
+?? js response.parsedBody.items.every((u) => u.isActive === true) == true
+
+### Get one user
+GET {{baseUrl}}/users/{{mwendeId}}
+
+?? status == 200
+?? body user.email == chv.mwende@afyalink.test
+
+### User IDs must be UUIDs
+GET {{baseUrl}}/users/1
+
+?? status == 400
+
+### Weak passwords are rejected
+POST {{baseUrl}}/users
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "fullName": "Weak Password", "email": "weak{{runTag}}@afyalink.test", "role": "CHV", "password": "password" }
+
+?? status == 400
+?? js JSON.stringify(response.parsedBody.message).includes('password') == true
+
+### Passwords longer than bcrypt's 72-byte limit are rejected
+POST {{baseUrl}}/users
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "fullName": "Long Password", "email": "long{{runTag}}@afyalink.test", "role": "CHV", "password": "a1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }
+
+?? status == 400
+
+### Server-controlled fields cannot be set (mass assignment)
+POST {{baseUrl}}/users
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "fullName": "Mass Assign", "email": "mass{{runTag}}@afyalink.test", "role": "CHV", "password": "{{initialPassword}}", "passwordHash": "x", "isActive": false, "id": "{{adminId}}" }
+
+?? status == 400
+
+### Names are restricted to name characters
+POST {{baseUrl}}/users
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "fullName": "<script>alert(1)</script>", "email": "xss{{runTag}}@afyalink.test", "role": "CHV", "password": "{{initialPassword}}" }
+
+?? status == 400
+
+### Create a CHV
+# @name newUser
+POST {{baseUrl}}/users
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "fullName": "HTTP Test CHV", "email": "  {{newEmail}}  ", "phone": "+254700000099", "role": "CHV", "locationId": 1, "password": "{{initialPassword}}" }
+
+?? status == 201
+?? body user.email == {{newEmail}}
+?? body user.role == CHV
+?? body user.isActive == true
+?? body user.passwordHash isFalse
+
+### Duplicate email is a conflict
+POST {{baseUrl}}/users
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "fullName": "Duplicate", "email": "{{newEmail}}", "role": "CHV", "password": "{{initialPassword}}" }
+
+?? status == 409
+
+### Admins cannot deactivate themselves
+PATCH {{baseUrl}}/users/{{adminId}}
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "isActive": false }
+
+?? status == 403
+
+### Admins cannot demote themselves
+PATCH {{baseUrl}}/users/{{adminId}}
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "role": "CHV" }
+
+?? status == 403
+
+### An empty update is rejected
+PATCH {{baseUrl}}/users/{{newUser.user.id}}
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{}
+
+?? status == 400
+
+### Email cannot be changed through PATCH
+PATCH {{baseUrl}}/users/{{newUser.user.id}}
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "email": "takeover@afyalink.test" }
+
+?? status == 400
+
+### Update profile fields
+PATCH {{baseUrl}}/users/{{newUser.user.id}}
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "phone": "+254700000098", "locationId": 3 }
+
+?? status == 200
+?? body user.phone == +254700000098
+?? body user.locationId == 3
+
+### Unknown user
+PATCH {{baseUrl}}/users/00000000-0000-4000-8000-000000000000
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "phone": "+254700000097" }
+
+?? status == 404
+
+# ---------------------------------------------------------------------------
+# Locations
+# ---------------------------------------------------------------------------
+
+### Create a location
+POST {{baseUrl}}/locations
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "county": "Kitui", "subCounty": "Kitui West", "ward": "Matinyani", "village": "HTTP test {{runTag}}", "latitude": -1.25, "longitude": 37.9 }
+
+?? status == 201
+?? body county == Kitui
+?? body village == HTTP test {{runTag}}
+
+### The same location twice is a conflict
+POST {{baseUrl}}/locations
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "county": "Kitui", "subCounty": "Kitui West", "ward": "Matinyani", "village": "HTTP test {{runTag}}" }
+
+?? status == 409
+
+### Location input is validated
+POST {{baseUrl}}/locations
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "county": "<b>Kitui</b>", "subCounty": "X", "ward": "Y", "latitude": 95 }
+
+?? status == 400
+
+# ---------------------------------------------------------------------------
+# Admin-wide reporting
+# ---------------------------------------------------------------------------
+
+### Admins see every CHV's reports
+GET {{baseUrl}}/reports?limit=100
+
+?? status == 200
+?? js new Set(response.parsedBody.items.map((r) => r.chvId)).size >= 2
+
+### Admins can filter by CHV
+GET {{baseUrl}}/reports?chvId={{ekaiId}}
+
+?? status == 200
+?? js response.parsedBody.items.length >= 1
+?? js response.parsedBody.items.every((r) => r.chvId === ekaiId) == true
+
+### Admins can read any report
+GET {{baseUrl}}/reports/432498d9-c983-4e4c-bed4-f548f1e49273
+
+?? status == 200
+?? body chvId == {{ekaiId}}
+
+### Analytics across all CHVs, with county and status breakdowns
+GET {{baseUrl}}/analytics/summary?days=60
+
+?? status == 200
+?? body scope == all
+?? js response.parsedBody.totals.reports >= 8
+?? js response.parsedBody.byCounty.some((c) => c.county === 'Turkana') == true
+?? js response.parsedBody.byStatus.length >= 1
+
+### Map across all CHVs
+GET {{baseUrl}}/analytics/map?days=60
+
+?? status == 200
+?? body scope == all
+?? js response.parsedBody.points.length >= 7
+
+### Admins see all sync history
+GET {{baseUrl}}/sync/logs?limit=100
+
+?? status == 200
+
+### Sign out admin
+POST {{baseUrl}}/auth/logout
+X-CSRF-Token: {{csrf.csrfToken}}
+
+?? status == 204
+
+# ---------------------------------------------------------------------------
+# The new CHV: first sign-in, a report, and a password change
+# ---------------------------------------------------------------------------
+
+### New CHV signs in
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "email": "{{newEmail}}", "password": "{{initialPassword}}" }
+
+{{
+  const cookies = [].concat(response.headers['set-cookie'] || []);
+  exports.newSession1 = (cookies.find((c) => c.startsWith('afya_session=')) || '').split(';')[0];
+}}
+
+?? status == 200
+?? body user.id == {{newUser.user.id}}
+
+### New CHV files a report for review
+POST {{baseUrl}}/reports
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{
+  "id": "{{reviewReportId}}",
+  "category": "WATER_SANITATION",
+  "conditionName": "Broken water point",
+  "severity": "MODERATE",
+  "casesCount": 1,
+  "ageGroup": "MIXED",
+  "locationId": 3,
+  "observedAt": "{{$datetime iso8601}}",
+  "clientCreatedAt": "{{$datetime iso8601}}"
+}
+
+?? status == 201
+
+### Change password: wrong current password
+POST {{baseUrl}}/auth/change-password
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "currentPassword": "NotMyPassword1", "newPassword": "{{changedPassword}}" }
+
+?? status == 400
+?? body message == Current password is incorrect.
+
+### Change password: weak new password
+POST {{baseUrl}}/auth/change-password
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "currentPassword": "{{initialPassword}}", "newPassword": "short" }
+
+?? status == 400
+
+### Change password: must differ from the current one
+POST {{baseUrl}}/auth/change-password
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "currentPassword": "{{initialPassword}}", "newPassword": "{{initialPassword}}" }
+
+?? status == 400
+
+### Change password: needs CSRF
+POST {{baseUrl}}/auth/change-password
+Content-Type: application/json
+
+{ "currentPassword": "{{initialPassword}}", "newPassword": "{{changedPassword}}" }
+
+?? status == 403
+
+### Change password (a fresh session cookie is issued)
+POST {{baseUrl}}/auth/change-password
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "currentPassword": "{{initialPassword}}", "newPassword": "{{changedPassword}}" }
+
+?? status == 200
+?? js response.headers['set-cookie'].some((c) => c.startsWith('afya_session=') && /HttpOnly/i.test(c)) == true
+
+### The session from before the change no longer works
+# @noCookieJar
+GET {{baseUrl}}/auth/me
+Cookie: {{newSession1}}
+
+?? status == 401
+
+### The fresh session works
+GET {{baseUrl}}/auth/me
+
+?? status == 200
+?? body user.id == {{newUser.user.id}}
+
+### Sign out
+POST {{baseUrl}}/auth/logout
+X-CSRF-Token: {{csrf.csrfToken}}
+
+?? status == 204
+
+### The old password no longer works
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "email": "{{newEmail}}", "password": "{{initialPassword}}" }
+
+?? status == 401
+
+### The new password works (this session is kept for the deactivation test)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "email": "{{newEmail}}", "password": "{{changedPassword}}" }
+
+{{
+  const cookies = [].concat(response.headers['set-cookie'] || []);
+  exports.newSession2 = (cookies.find((c) => c.startsWith('afya_session=')) || '').split(';')[0];
+}}
+
+?? status == 200
+
+# ---------------------------------------------------------------------------
+# Admin: review the report, deactivate and reset the CHV
+# ---------------------------------------------------------------------------
+
+### Sign in as admin again
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "email": "admin@afyalink.test", "password": "AfyaLink#Dev2026" }
+
+?? status == 200
+
+### Review the report
+PATCH {{baseUrl}}/reports/{{reviewReportId}}/status
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "status": "REVIEWED", "reviewNote": "Water team notified." }
+
+?? status == 200
+?? body status == REVIEWED
+?? body reviewedById == {{adminId}}
+?? body reviewNote == Water team notified.
+?? body reviewedAt exists
+
+### Reviewing twice is a conflict
+PATCH {{baseUrl}}/reports/{{reviewReportId}}/status
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "status": "REVIEWED" }
+
+?? status == 409
+
+### Mark the report actioned
+PATCH {{baseUrl}}/reports/{{reviewReportId}}/status
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "status": "ACTIONED" }
+
+?? status == 200
+?? body status == ACTIONED
+
+### Reports cannot move backwards to SUBMITTED
+PATCH {{baseUrl}}/reports/{{reviewReportId}}/status
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "status": "SUBMITTED" }
+
+?? status == 400
+
+### Unknown report
+PATCH {{baseUrl}}/reports/00000000-0000-4000-8000-000000000000/status
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "status": "REVIEWED" }
+
+?? status == 404
+
+### Filter by status
+GET {{baseUrl}}/reports?status=ACTIONED&chvId={{newUser.user.id}}
+
+?? status == 200
+?? body total == 1
+?? js response.parsedBody.items[0].id == {{reviewReportId}}
+
+### The CHV's session is still valid before deactivation
+# @noCookieJar
+GET {{baseUrl}}/auth/me
+Cookie: {{newSession2}}
+
+?? status == 200
+
+### Deactivate the CHV
+PATCH {{baseUrl}}/users/{{newUser.user.id}}
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "isActive": false }
+
+?? status == 200
+?? body user.isActive == false
+
+### Deactivation ends the CHV's existing session immediately
+# @noCookieJar
+GET {{baseUrl}}/auth/me
+Cookie: {{newSession2}}
+
+?? status == 401
+?? body message == Account is no longer active.
+
+### A deactivated account cannot sign in (same generic message)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "email": "{{newEmail}}", "password": "{{changedPassword}}" }
+
+?? status == 401
+?? body message == Invalid email or password.
+
+### Reactivate the CHV
+PATCH {{baseUrl}}/users/{{newUser.user.id}}
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "isActive": true }
+
+?? status == 200
+?? body user.isActive == true
+
+### Reactivation does not revive the old session
+# @noCookieJar
+GET {{baseUrl}}/auth/me
+Cookie: {{newSession2}}
+
+?? status == 401
+?? body message == Session is no longer valid. Please sign in again.
+
+### Admins reset other users' passwords, not their own
+POST {{baseUrl}}/users/{{adminId}}/reset-password
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "password": "{{resetPassword}}" }
+
+?? status == 403
+
+### Reset passwords follow the policy
+POST {{baseUrl}}/users/{{newUser.user.id}}/reset-password
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "password": "12345678901" }
+
+?? status == 400
+
+### Reset the CHV's password
+POST {{baseUrl}}/users/{{newUser.user.id}}/reset-password
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "password": "{{resetPassword}}" }
+
+?? status == 204
+
+### Sign out admin
+POST {{baseUrl}}/auth/logout
+X-CSRF-Token: {{csrf.csrfToken}}
+
+?? status == 204
+
+# ---------------------------------------------------------------------------
+# The CHV after the reset, then account lockout
+# ---------------------------------------------------------------------------
+
+### The changed password stopped working after the reset
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "email": "{{newEmail}}", "password": "{{changedPassword}}" }
+
+?? status == 401
+
+### The reset password works
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "email": "{{newEmail}}", "password": "{{resetPassword}}" }
+
+?? status == 200
+
+### CHVs cannot reach admin user routes
+POST {{baseUrl}}/users/{{mwendeId}}/reset-password
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "password": "{{resetPassword}}" }
+
+?? status == 403
+
+### Sign out
+POST {{baseUrl}}/auth/logout
+X-CSRF-Token: {{csrf.csrfToken}}
+
+?? status == 204
+
+### Failed sign-in 1 of 5 (the successful sign-in above reset the counter)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "email": "{{newEmail}}", "password": "WrongPassword1" }
+
+?? status == 401
+
+### Failed sign-in 2
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "email": "{{newEmail}}", "password": "WrongPassword2" }
+
+?? status == 401
+
+### Failed sign-in 3
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "email": "{{newEmail}}", "password": "WrongPassword3" }
+
+?? status == 401
+
+### Failed sign-in 4
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "email": "{{newEmail}}", "password": "WrongPassword4" }
+
+?? status == 401
+
+### Failed sign-in 5
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "email": "{{newEmail}}", "password": "WrongPassword5" }
+
+?? status == 401
+
+### The account is now locked, even for the correct password
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "email": "{{newEmail}}", "password": "{{resetPassword}}" }
+
+?? status == 429

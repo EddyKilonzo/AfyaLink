@@ -85,4 +85,37 @@ describe('AfyaLink API (e2e, no database)', () => {
     const cookies = ([] as string[]).concat(res.headers['set-cookie'] ?? []);
     expect(cookies.some((c) => c.startsWith('afya_csrf=') && /HttpOnly/i.test(c))).toBe(true);
   });
+
+  it.each([
+    ['get', '/api/locations'],
+    ['get', '/api/users'],
+    ['get', '/api/sync/logs'],
+    ['get', '/api/analytics/map'],
+  ] as const)('requires a session for %s %s', async (method, path) => {
+    await request(app.getHttpServer())[method](path).expect(401);
+  });
+
+  it('requires CSRF before authentication on new state-changing routes', async () => {
+    const id = '3f1e4c2a-8b7d-4e6f-9a1b-2c3d4e5f6a7b';
+    await request(app.getHttpServer()).patch(`/api/reports/${id}/status`).send({ status: 'REVIEWED' }).expect(403);
+    await request(app.getHttpServer()).post('/api/users').send({}).expect(403);
+    await request(app.getHttpServer()).post('/api/auth/change-password').send({}).expect(403);
+  });
+
+  it('requires a session for change-password even with a valid CSRF token', async () => {
+    const { agent, token } = await csrfAgent();
+    await agent
+      .post('/api/auth/change-password')
+      .set('X-CSRF-Token', token)
+      .send({ currentPassword: 'x', newPassword: 'Another1234pass' })
+      .expect(401);
+  });
+
+  it('sends security headers and no-store on every response', async () => {
+    const res = await request(app.getHttpServer()).get('/api/health').expect(200);
+    expect(res.headers['cache-control']).toBe('no-store');
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+    expect(res.headers['x-frame-options']).toBe('DENY');
+    expect(res.headers['x-powered-by']).toBeUndefined();
+  });
 });

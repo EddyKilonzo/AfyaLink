@@ -1,0 +1,158 @@
+# AfyaLink HTTP tests: health, CSRF and session lifecycle.
+# Run all: `npm run test:http` (see README). Run by hand with the httpyac VS Code
+# extension or CLI (`--env dev`) against a migrated and seeded database.
+# Seed accounts share the synthetic password AfyaLink#Dev2026.
+
+### Health is public and never cached
+GET {{baseUrl}}/health
+
+?? status == 200
+?? body status == ok
+?? body database == connected
+?? header cache-control == no-store
+?? header x-powered-by isFalse
+
+### Private routes need a session
+GET {{baseUrl}}/reports
+
+?? status == 401
+?? body path == /api/reports
+
+### Unknown routes use the standard error shape
+GET {{baseUrl}}/does-not-exist
+
+?? status == 404
+?? body statusCode == 404
+
+### Issue a CSRF token (also set as an HTTP-only cookie)
+# @name csrf
+GET {{baseUrl}}/auth/csrf
+
+?? status == 200
+?? body csrfToken exists
+?? js response.headers['set-cookie'].some((c) => c.startsWith('afya_csrf=') && /HttpOnly/i.test(c)) == true
+
+### Login without the CSRF header is refused
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ "email": "chv.mwende@afyalink.test", "password": "AfyaLink#Dev2026" }
+
+?? status == 403
+
+### Login with a forged CSRF header is refused
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: forged-token-value
+
+{ "email": "chv.mwende@afyalink.test", "password": "AfyaLink#Dev2026" }
+
+?? status == 403
+
+### Login from a disallowed origin is refused even with a valid token
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+Origin: https://evil.example
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "email": "chv.mwende@afyalink.test", "password": "AfyaLink#Dev2026" }
+
+?? status == 403
+?? body message == Origin not allowed.
+
+### Login body is validated
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "email": "not-an-email", "password": "x" }
+
+?? status == 400
+
+### Extra login fields are rejected
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "email": "chv.mwende@afyalink.test", "password": "AfyaLink#Dev2026", "role": "ADMIN" }
+
+?? status == 400
+
+### Wrong password gets a generic 401
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "email": "chv.mwende@afyalink.test", "password": "WrongPassword123" }
+
+?? status == 401
+?? body message == Invalid email or password.
+
+### Unknown email gets the same generic 401
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "email": "nobody@afyalink.test", "password": "WrongPassword123" }
+
+?? status == 401
+?? body message == Invalid email or password.
+
+### CHV logs in; the session cookie is HTTP-only and SameSite
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+Origin: {{origin}}
+X-CSRF-Token: {{csrf.csrfToken}}
+
+{ "email": "CHV.Mwende@afyalink.test ", "password": "AfyaLink#Dev2026" }
+
+{{
+  const cookies = [].concat(response.headers['set-cookie'] || []);
+  exports.firstSession = (cookies.find((c) => c.startsWith('afya_session=')) || '').split(';')[0];
+}}
+
+?? status == 200
+?? body user.email == chv.mwende@afyalink.test
+?? body user.role == CHV
+?? body user.passwordHash isFalse
+?? js response.headers['set-cookie'].some((c) => c.startsWith('afya_session=') && /HttpOnly/i.test(c) && /SameSite=Lax/i.test(c)) == true
+
+### Current user
+GET {{baseUrl}}/auth/me
+
+?? status == 200
+?? body user.id == {{login.user.id}}
+?? body user.passwordHash isFalse
+
+### Logout needs CSRF too
+POST {{baseUrl}}/auth/logout
+
+?? status == 403
+
+### Logout
+POST {{baseUrl}}/auth/logout
+X-CSRF-Token: {{csrf.csrfToken}}
+
+?? status == 204
+
+### The browser cookie is gone
+GET {{baseUrl}}/auth/me
+
+?? status == 401
+
+### A copied session cookie stops working after logout (server-side revocation)
+# @noCookieJar
+GET {{baseUrl}}/auth/me
+Cookie: {{firstSession}}
+
+?? status == 401
+?? body message == Session has ended. Please sign in again.
+
+### A tampered session token is rejected
+# @noCookieJar
+GET {{baseUrl}}/auth/me
+Cookie: {{firstSession}}x
+
+?? status == 401
+?? body message == Session expired or invalid.
