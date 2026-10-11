@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
@@ -20,6 +20,9 @@ import {
   ReportCategory,
   ReportSeverity,
 } from '../../database/entities/health-report.entity.js';
+import { IsNotFutureDate } from '../../common/validation/validators.js';
+
+const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 
 /**
  * Payload for a health report. `id` is generated on the device when the
@@ -33,6 +36,7 @@ export class CreateReportDto {
   @IsEnum(ReportCategory)
   category: ReportCategory;
 
+  @Transform(trim)
   @IsString()
   @MinLength(2)
   @MaxLength(120)
@@ -58,6 +62,7 @@ export class CreateReportDto {
   symptoms?: string[];
 
   @IsOptional()
+  @Transform(trim)
   @IsString()
   @MaxLength(2000)
   notes?: string;
@@ -78,9 +83,11 @@ export class CreateReportDto {
   @IsLongitude()
   longitude?: number;
 
-  @IsDateString()
+  @IsDateString({ strict: true })
+  @IsNotFutureDate()
   observedAt: string;
 
-  @IsDateString()
+  @IsDateString({ strict: true })
+  @IsNotFutureDate()
   clientCreatedAt: string;
 }

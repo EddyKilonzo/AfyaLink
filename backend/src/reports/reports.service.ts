@@ -1,16 +1,29 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import type { SessionUser } from '../common/decorators/auth.decorators.js';
 import { paginate, type Paginated } from '../common/dto/pagination.dto.js';
 import { errorCode, toHttpException } from '../common/errors/handle-error.js';
 import { DatabaseService } from '../database/database.service.js';
-import { HealthReport } from '../database/entities/health-report.entity.js';
+import { HealthReport, ReportStatus } from '../database/entities/health-report.entity.js';
 import { UserRole } from '../database/entities/user.entity.js';
 import type { CreateReportDto } from './dto/create-report.dto.js';
 import type { ListReportsQueryDto } from './dto/list-reports.dto.js';
+import type { UpdateReportStatusDto } from './dto/update-report-status.dto.js';
 
 export type UpsertOutcome = 'created' | 'duplicate';
+
+/** Statuses a report may be in for an ADMIN to move it to the key status. */
+const ALLOWED_FROM: Record<ReportStatus.REVIEWED | ReportStatus.ACTIONED, ReportStatus[]> = {
+  [ReportStatus.REVIEWED]: [ReportStatus.SUBMITTED],
+  [ReportStatus.ACTIONED]: [ReportStatus.SUBMITTED, ReportStatus.REVIEWED],
+};
 
 @Injectable()
 export class ReportsService {
@@ -23,13 +36,19 @@ export class ReportsService {
 
   async list(user: SessionUser, query: ListReportsQueryDto): Promise<Paginated<HealthReport>> {
     try {
+      if (query.from && query.to && Date.parse(query.from) > Date.parse(query.to)) {
+        throw new BadRequestException('"from" must not be later than "to".');
+      }
       this.db.assertReady();
       const qb = this.reports.createQueryBuilder('r').orderBy('r.observedAt', 'DESC');
 
-      // CHVs only ever see their own reports; admins see everything.
+      // CHVs only ever see their own reports; admins see everything (optionally one CHV's).
       if (user.role !== UserRole.ADMIN) qb.andWhere('r.chvId = :chvId', { chvId: user.id });
+      else if (query.chvId) qb.andWhere('r.chvId = :chvId', { chvId: query.chvId });
       if (query.category) qb.andWhere('r.category = :category', { category: query.category });
       if (query.severity) qb.andWhere('r.severity = :severity', { severity: query.severity });
+      if (query.status) qb.andWhere('r.status = :status', { status: query.status });
+      if (query.locationId) qb.andWhere('r.locationId = :locationId', { locationId: query.locationId });
       if (query.from) qb.andWhere('r.observedAt >= :from', { from: new Date(query.from) });
       if (query.to) qb.andWhere('r.observedAt <= :to', { to: new Date(query.to) });
 
@@ -103,6 +122,33 @@ export class ReportsService {
       return { outcome: 'created', report: saved };
     } catch (error) {
       throw toHttpException(error, this.logger, 'Create report');
+    }
+  }
+
+  /**
+   * ADMIN review. The conditional UPDATE makes the transition atomic: two
+   * admins acting at once cannot move a report backwards or overwrite each other.
+   */
+  async updateStatus(admin: SessionUser, id: string, dto: UpdateReportStatusDto): Promise<HealthReport> {
+    try {
+      this.db.assertReady();
+      const result = await this.reports.update(
+        { id, status: In(ALLOWED_FROM[dto.status]) },
+        {
+          status: dto.status,
+          reviewedById: admin.id,
+          reviewedAt: new Date(),
+          reviewNote: dto.reviewNote || null,
+        },
+      );
+      if (!result.affected) {
+        const current = await this.reports.findOne({ where: { id } });
+        if (!current) throw new NotFoundException('Report not found.');
+        throw new ConflictException(`Report is already ${current.status} and cannot move to ${dto.status}.`);
+      }
+      return await this.reports.findOneOrFail({ where: { id } });
+    } catch (error) {
+      throw toHttpException(error, this.logger, 'Update report status');
     }
   }
 

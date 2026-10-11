@@ -51,6 +51,15 @@ describe('CreateReportDto validation', () => {
     expect(await errorsFor({ ...base(), chvId: 'someone-else' })).toContain('chvId');
   });
 
+  it('rejects observation dates in the future', async () => {
+    const future = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    expect(await errorsFor({ ...base(), observedAt: future })).toContain('observedAt');
+  });
+
+  it('rejects impossible calendar dates', async () => {
+    expect(await errorsFor({ ...base(), observedAt: '2026-02-30T10:00:00Z' })).toContain('observedAt');
+  });
+
   it('limits free-text length', async () => {
     expect(await errorsFor({ ...base(), notes: 'x'.repeat(2001) })).toContain('notes');
   });

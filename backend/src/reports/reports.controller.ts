@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Logger, Param, ParseUUIDPipe, Post, Query, Res } from '@nestjs/common';
+import { Body, Controller, Get, Logger, Param, ParseUUIDPipe, Patch, Post, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { CurrentUser, Roles, type SessionUser } from '../common/decorators/auth.decorators.js';
 import { toHttpException } from '../common/errors/handle-error.js';
 import { UserRole } from '../database/entities/user.entity.js';
 import { CreateReportDto } from './dto/create-report.dto.js';
 import { ListReportsQueryDto } from './dto/list-reports.dto.js';
+import { UpdateReportStatusDto } from './dto/update-report-status.dto.js';
 import { ReportsService } from './reports.service.js';
 
 @Controller('reports')
@@ -45,6 +46,21 @@ export class ReportsController {
       return { outcome, report };
     } catch (error) {
       throw toHttpException(error, this.logger, 'POST /reports');
+    }
+  }
+
+  /** ADMIN review: SUBMITTED -> REVIEWED -> ACTIONED (forward only). */
+  @Patch(':id/status')
+  @Roles(UserRole.ADMIN)
+  async updateStatus(
+    @CurrentUser() admin: SessionUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: UpdateReportStatusDto,
+  ) {
+    try {
+      return await this.reportsService.updateStatus(admin, id, dto);
+    } catch (error) {
+      throw toHttpException(error, this.logger, 'PATCH /reports/:id/status');
     }
   }
 }
