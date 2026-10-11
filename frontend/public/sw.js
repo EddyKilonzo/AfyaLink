@@ -4,26 +4,71 @@
  * Caches ONLY same-origin app shell resources so the UI can open offline:
  *   - /_next/static/* (hashed, immutable): cache-first
  *   - page navigations: network-first, falling back to the cached copy
- *   - icons and manifest: stale-while-revalidate
+ *   - icons and manifest: precached, then stale-while-revalidate
  *
  * Never cached: anything cross-origin (the API runs on its own origin),
  * any /api/ path, non-GET requests, and responses marked no-store/private.
  * Health data lives in IndexedDB under app control, not in this cache.
  */
-const VERSION = "afyalink-v1";
+const VERSION = "afyalink-v3";
 const SHELL_CACHE = `${VERSION}-shell`;
 const STATIC_CACHE = `${VERSION}-static`;
-const SHELL_ROUTES = ["/", "/login", "/dashboard", "/reports", "/reports/new", "/sync", "/maps"];
+const OFFLINE_ROUTE = "/offline";
+// Every static app route. Dynamic ones (/reports/:id) fall back to OFFLINE_ROUTE.
+const SHELL_ROUTES = [
+  "/",
+  "/login",
+  OFFLINE_ROUTE,
+  "/dashboard",
+  "/reports",
+  "/reports/new",
+  "/sync",
+  "/maps",
+  "/settings",
+  "/admin",
+  "/admin/reports",
+  "/admin/users",
+  "/admin/users/new",
+  "/admin/locations",
+  "/admin/audit",
+];
+// Install metadata, so the installed app keeps its name and icons offline.
+const STATIC_FILES = [
+  "/manifest.webmanifest",
+  "/icon.svg",
+  "/icon-maskable.svg",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
+  "/icons/icon-maskable-512.png",
+];
+// Hashed script/style/font URLs referenced by a page's HTML.
+const ASSET_PATTERN = /\/_next\/static\/[^"'\s)\\]+/g;
+
+/** Caches a page and the scripts/styles it references, so it can run offline. */
+async function precacheRoute(url) {
+  const response = await fetch(new Request(url, { credentials: "same-origin" }));
+  // A redirected response (e.g. to /login) cannot answer a navigation later; skip it.
+  if (!response.ok || response.redirected) return;
+  const html = await response.clone().text();
+  await (await caches.open(SHELL_CACHE)).put(url, response);
+  const assets = [...new Set(html.match(ASSET_PATTERN) || [])];
+  const staticCache = await caches.open(STATIC_CACHE);
+  await Promise.allSettled(
+    assets.map(async (asset) => {
+      if (await staticCache.match(asset)) return;
+      const res = await fetch(asset);
+      if (res.ok) await staticCache.put(asset, res);
+    }),
+  );
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches
-      .open(SHELL_CACHE)
-      .then((cache) =>
-        // Best effort: one failing route must not block installation.
-        Promise.allSettled(SHELL_ROUTES.map((url) => cache.add(new Request(url, { credentials: "same-origin" })))),
-      )
-      .then(() => self.skipWaiting()),
+    // Best effort: one failing route or file must not block installation.
+    Promise.allSettled([
+      ...SHELL_ROUTES.map(precacheRoute),
+      caches.open(STATIC_CACHE).then((cache) => Promise.allSettled(STATIC_FILES.map((file) => cache.add(file)))),
+    ]).then(() => self.skipWaiting()),
   );
 });
 
@@ -49,7 +94,7 @@ async function networkFirst(request) {
     if (isCacheable(response)) cache.put(request, response.clone()).catch(() => undefined);
     return response;
   } catch {
-    const cached = (await cache.match(request, { ignoreSearch: true })) || (await cache.match("/"));
+    const cached = (await cache.match(request, { ignoreSearch: true })) || (await cache.match(OFFLINE_ROUTE));
     if (cached) return cached;
     return new Response("AfyaLink is offline and this page has not been opened before.", {
       status: 503,

@@ -1,33 +1,43 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
-import { Fraunces, Public_Sans } from "next/font/google";
+import { Geist } from "next/font/google";
+import { PageTexture } from "@/components/brand/hex-texture";
 import { Providers } from "./providers";
 import "./globals.css";
 
-const sans = Public_Sans({ variable: "--font-sans-app", subsets: ["latin"] });
-const display = Fraunces({ variable: "--font-display-app", subsets: ["latin"], weight: ["500", "600"] });
+const geist = Geist({ variable: "--font-geist", subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
   title: {
-    default: "AfyaLink — Offline-first community health reporting",
+    default: "AfyaLink — Community health reporting that works offline",
     template: "%s · AfyaLink",
   },
-  description: "From Community Reports to Faster Health Action. Offline-first health reporting for Community Health Volunteers in rural Kenya.",
+  description:
+    "AfyaLink helps community health volunteers record and share health reports, even without a reliable connection. Administrators review them on live dashboards and maps.",
   applicationName: "AfyaLink",
   appleWebApp: { capable: true, title: "AfyaLink", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0e6a59",
+  themeColor: "#0b3d35",
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${sans.variable} ${display.variable} antialiased`}>
-      <body className="min-h-dvh">
-        <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-surface focus:px-4 focus:py-2">
+    <html lang="en" className={`${geist.variable} antialiased`}>
+      {/* Browser extensions (e.g. Grammarly) add attributes to <body>; ignore those mismatches only. */}
+      <body className="min-h-dvh" suppressHydrationWarning>
+        <noscript>
+          <style>{"[data-reveal]{opacity:1!important;transform:none!important}"}</style>
+        </noscript>
+        <PageTexture />
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-surface focus:px-4 focus:py-2 focus:shadow-lg"
+        >
           Skip to content
         </a>
         <Providers>{children}</Providers>
