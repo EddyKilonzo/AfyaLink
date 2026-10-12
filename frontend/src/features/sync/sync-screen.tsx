@@ -14,7 +14,6 @@ import { useSyncLogs } from "@/features/admin/hooks";
 import { useAuth } from "@/features/auth/auth-context";
 import { useLocalReports } from "@/features/reports/hooks";
 import { ReportRow } from "@/features/reports/report-row";
-import { HoldButton } from "@/components/hold-button";
 import type { LocalReport } from "@/lib/db";
 import { formatDateTime, formatRelative, plural } from "@/lib/format";
 import { toErrorMessage } from "@/lib/api";

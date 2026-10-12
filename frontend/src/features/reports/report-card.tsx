@@ -4,7 +4,7 @@ import { ReviewStatusBadge, SeverityBadge, SyncStateBadge } from "@/components/u
 import { cx } from "@/components/ui/cx";
 import { formatRelative } from "@/lib/format";
 import type { LocalReport } from "@/lib/db";
-import type { ServerReport, ReportCategory, ReportStatus } from "@/types";
+import type { ServerReport, ReportStatus } from "@/types";
 import { CATEGORY_LABELS } from "@/types";
 import { CategoryIcon } from "./report-row";
 

@@ -2,7 +2,6 @@
 
 import { motion } from "motion/react";
 import { useId, type ReactNode } from "react";
-import { EASE_OUT } from "@/components/motion";
 import { cx } from "./cx";
 
 /**

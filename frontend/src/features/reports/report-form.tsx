@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Check, CheckCircle2, LocateFixed, MapPinOff, Minus, Plus, ShieldCheck } from "lucide-react";
+import { CheckCircle2, LocateFixed, MapPinOff, Minus, Plus, ShieldCheck } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -529,7 +529,7 @@ function Step({ label, done, active, failed }: { label: string; done?: boolean; 
         failed ? "bg-failed-bg text-failed ring-failed/15" : done ? "bg-synced-bg text-synced ring-synced/15" : active ? "bg-syncing-bg text-syncing ring-syncing/15" : "bg-sunken text-muted ring-line",
       )}
     >
-      {done ? <Check className="size-3.5" strokeWidth={3} aria-hidden /> : <span className={cx("size-1.5 rounded-full bg-current", active && "animate-pulse")} aria-hidden />}
+      {done ? <CheckCircle2 className="size-3.5" strokeWidth={3} aria-hidden /> : <span className={cx("size-1.5 rounded-full bg-current", active && "animate-pulse")} aria-hidden />}
       {label}
     </li>
   );

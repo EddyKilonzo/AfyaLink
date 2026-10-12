@@ -17,7 +17,6 @@ export function HoldButton({
   holdMs = 700,
   disabled,
   className,
-  children,
   tone = "danger",
 }: {
   label: string;
@@ -25,7 +24,6 @@ export function HoldButton({
   holdMs?: number;
   disabled?: boolean;
   className?: string;
-  children: ReactNode;
   tone?: HoldTone;
 }) {
   const [progress, setProgress] = useState(0);

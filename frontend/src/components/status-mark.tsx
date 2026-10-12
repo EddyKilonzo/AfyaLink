@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Check, CheckCircle2, CircleAlert, Clock, Loader2, X } from "lucide-react";
+import { Check, CheckCircle2, CircleAlert, Clock, Loader2 } from "lucide-react";
 import { cx } from "@/components/ui/cx";
 
 export type StatusMarkTone =

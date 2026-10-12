@@ -19,11 +19,17 @@ function systemIsDark(): boolean {
   return window.matchMedia("(prefers-color-scheme: dark)").matches;
 }
 
+/** Resolve a theme choice to light/dark without touching React state. */
+function resolveTheme(theme: Theme): "light" | "dark" {
+  if (theme === "dark") return "dark";
+  if (theme === "light") return "light";
+  return systemIsDark() ? "dark" : "light";
+}
+
 function apply(theme: Theme) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
-  const dark = theme === "dark" || (theme === "system" && systemIsDark());
-  root.classList.toggle("dark", dark);
+  root.classList.toggle("dark", resolveTheme(theme) === "dark");
 }
 
 const ThemeContext = createContext<{
@@ -38,17 +44,14 @@ const ThemeContext = createContext<{
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(getInitial);
-  const [resolved, setResolved] = useState<"light" | "dark">("light");
+  // Computed synchronously from `theme` — no setState inside an effect.
+  const resolved = useMemo(() => resolveTheme(theme), [theme]);
 
+  // Side effect only: toggle the class on the root and subscribe to OS changes.
   useEffect(() => {
-    setResolved(theme === "dark" ? "dark" : theme === "light" ? "light" : systemIsDark() ? "dark" : "light");
     apply(theme);
-    const onQuery = () => {
-      if (theme === "system") {
-        setResolved(systemIsDark() ? "dark" : "light");
-        apply("system");
-      }
-    };
+    if (theme !== "system") return;
+    const onQuery = () => apply("system");
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     mq.addEventListener("change", onQuery);
     return () => mq.removeEventListener("change", onQuery);
@@ -64,7 +67,7 @@ export function useTheme() {
 }
 
 export function ThemeToggle() {
-  const { theme, setTheme, resolved } = useTheme();
+  const { setTheme, resolved } = useTheme();
   const next = resolved === "dark" ? "light" : "dark";
   return (
     <button
