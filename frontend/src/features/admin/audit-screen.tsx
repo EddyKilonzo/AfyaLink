@@ -20,7 +20,7 @@ import { useMemo, useState } from "react";
 import { AsyncBoundary } from "@/components/async-boundary";
 import { Stagger, StaggerItem } from "@/components/motion";
 import { Pagination } from "@/components/pagination";
-import { FilterSelect, PageHeader, Panel } from "@/components/ui";
+import { Button, FilterSelect, PageHeader, Panel } from "@/components/ui";
 import { cx } from "@/components/ui/cx";
 import { formatDate } from "@/lib/format";
 import { AUDIT_ACTIONS, type AuditAction, type AuditLog } from "@/types";
@@ -49,7 +49,9 @@ const time = (iso: string) => new Date(iso).toLocaleTimeString(undefined, { hour
 export function AuditScreen() {
   const [page, setPage] = useState(1);
   const [action, setAction] = useState<AuditAction | "">("");
-  const logs = useAuditLogs({ page, limit: 30, action: action || undefined });
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const logs = useAuditLogs({ page, limit: 30, action: action || undefined, from: from || undefined, to: to || undefined });
 
   return (
     <>
@@ -57,21 +59,49 @@ export function AuditScreen() {
         title="Audit log"
         description="A permanent record of sign-ins, account changes, reviews and exports. Entries can't be edited or deleted."
         action={
-          <FilterSelect
-            label="Action"
-            value={action}
-            onChange={(e) => {
-              setAction(e.target.value as AuditAction | "");
-              setPage(1);
-            }}
-          >
-            <option value="">All actions</option>
-            {AUDIT_ACTIONS.map((a) => (
-              <option key={a} value={a}>
-                {ACTIONS[a].label}
-              </option>
-            ))}
-          </FilterSelect>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <FilterSelect
+              label="Action"
+              value={action}
+              onChange={(e) => {
+                setAction(e.target.value as AuditAction | "");
+                setPage(1);
+              }}
+            >
+              <option value="">All actions</option>
+              {AUDIT_ACTIONS.map((a) => (
+                <option key={a} value={a}>
+                  {ACTIONS[a].label}
+                </option>
+              ))}
+            </FilterSelect>
+            <div className="flex items-end gap-2">
+              <label className="grid gap-1">
+                <span className="text-label">From</span>
+                <input
+                  type="date"
+                  value={from}
+                  onChange={(e) => {
+                    setFrom(e.target.value);
+                    setPage(1);
+                  }}
+                  className="min-h-10 rounded-[10px] border border-line-strong bg-surface px-3 text-sm shadow-xs focus:border-brand-500 focus:shadow-[var(--shadow-glow)] focus:outline-none"
+                />
+              </label>
+              <label className="grid gap-1">
+                <span className="text-label">To</span>
+                <input
+                  type="date"
+                  value={to}
+                  onChange={(e) => {
+                    setTo(e.target.value);
+                    setPage(1);
+                  }}
+                  className="min-h-10 rounded-[10px] border border-line-strong bg-surface px-3 text-sm shadow-xs focus:border-brand-500 focus:shadow-[var(--shadow-glow)] focus:outline-none"
+                />
+              </label>
+            </div>
+          </div>
         }
       />
 

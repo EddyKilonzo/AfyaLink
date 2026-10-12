@@ -1,4 +1,5 @@
 import {
+  BookOpen,
   ClipboardCheck,
   FilePlus2,
   FileText,
@@ -36,6 +37,7 @@ const exact = (href: string) => (path: string) => path === href;
 const within = (href: string) => (path: string) => path === href || path.startsWith(`${href}/`);
 const reportPages = (path: string) => path === "/reports" || (path.startsWith("/reports/") && !path.startsWith("/reports/new"));
 
+const HELP: NavItem = { href: "/help", label: "Help", short: "Help", Icon: BookOpen, match: within("/help") };
 const MAP: NavItem = { href: "/maps", label: "Disease map", short: "Map", Icon: Map, match: within("/maps") };
 const SYNC: NavItem = { href: "/sync", label: "Sync & offline", short: "Sync", Icon: RefreshCw, match: within("/sync") };
 const SETTINGS: NavItem = { href: "/settings", label: "Settings", Icon: Settings, match: within("/settings") };
@@ -51,7 +53,7 @@ export const NAV: Record<UserRole, NavGroup[]> = {
         MAP,
       ],
     },
-    { label: "Account", items: [SETTINGS] },
+    { label: "Account", items: [SETTINGS, HELP] },
   ],
   ADMIN: [
     {
@@ -76,7 +78,7 @@ export const NAV: Record<UserRole, NavGroup[]> = {
         { href: "/admin/audit", label: "Audit log", Icon: ScrollText, match: within("/admin/audit") },
       ],
     },
-    { label: "Account", items: [SYNC, SETTINGS] },
+    { label: "Account", items: [SYNC, SETTINGS, HELP] },
   ],
 };
 

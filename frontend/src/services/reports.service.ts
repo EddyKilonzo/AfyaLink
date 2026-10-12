@@ -38,4 +38,7 @@ export const reportsService = {
   /** ADMIN CSV export with the same filters (paging ignored, at most 10 000 rows). */
   exportCsv: (filters: Omit<ReportFilters, "page" | "limit"> = {}) =>
     apiDownload(`/reports/export${toQuery(filters)}`, `afyalink-reports-${new Date().toISOString().slice(0, 10)}.csv`),
+  /** Streams a single report as a PDF. */
+  pdf: (id: string) =>
+    apiDownload(`/reports/${seg(id)}/pdf`, `report-${id.slice(0, 8)}.pdf`),
 };

@@ -34,3 +34,14 @@ export function useLocations() {
 export function useCreateLocation() {
   return useMutation((input: CreateLocationInput) => locationsService.create(input));
 }
+
+export function useUpdateLocation() {
+  return useMutation(({ id, input }: { id: number; input: Partial<CreateLocationInput> }) =>
+    locationsService.update(id, input),
+  );
+}
+
+/** Delete a location. The API rejects it if volunteers are assigned to it. */
+export function useDeleteLocation() {
+  return useMutation((id: number) => locationsService.remove(id));
+}

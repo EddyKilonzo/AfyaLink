@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, CheckCheck, Eye, MapPin, PencilLine } from "lucide-react";
+import { ArrowLeft, CheckCheck, Download, Eye, MapPin, PencilLine } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
@@ -10,6 +10,7 @@ import { Badge, Button, ButtonLink, DataList, Panel, PanelHeader, ReviewStatusBa
 import { useConfirm } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/features/auth/auth-context";
+import { useDownloadReportPdf } from "@/features/reports/hooks";
 import { useLocations } from "@/features/locations/hooks";
 import { formatDateTime, formatRelative } from "@/lib/format";
 import { isUuid } from "@/lib/security";
@@ -122,6 +123,8 @@ export function ReportDetailScreen() {
                     </ButtonLink>
                   )}
 
+                  <ReportPdfButton id={r.id} />
+
                   <RoleGate roles={["ADMIN"]}>
                     <ReviewActions report={r} onDone={report.reload} />
                   </RoleGate>
@@ -135,7 +138,23 @@ export function ReportDetailScreen() {
   );
 }
 
-/** Forward-only review; the API rejects any other transition with 409. */
+function ReportPdfButton({ id }: { id: string }) {
+  const download = useDownloadReportPdf();
+  const toast = useToast();
+  return (
+    <Button
+      variant="outline"
+      className="w-full"
+      loading={download.pending}
+      onClick={() => {
+        void download.run(id).catch((e) => toast.error("Could not download PDF", e instanceof Error ? e.message : "Try again later."));
+      }}
+      icon={<Download className="size-4" aria-hidden />}
+    >
+      Download as PDF
+    </Button>
+  );
+}
 export function ReviewActions({ report, onDone, compact = false }: { report: ServerReport; onDone: () => void; compact?: boolean }) {
   const review = useReviewReport();
   const confirm = useConfirm();
