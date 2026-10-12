@@ -1,5 +1,6 @@
 "use client";
 
+import { RefreshCw } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
 
 /**
@@ -7,54 +8,58 @@ import { useEffect, useRef, type ReactNode } from "react";
  * threshold, a spinner shows; releasing triggers `onRefresh`.
  */
 export function PullToRefresh({ onRefresh, children }: { onRefresh: () => Promise<void> | void; children: ReactNode }) {
-  const startY = useRef(0);
-  const pulling = useRef(false);
   const el = useRef<HTMLDivElement>(null);
+  const spinner = useRef<HTMLDivElement>(null);
+  const refreshRef = useRef(onRefresh);
+  useEffect(() => {
+    refreshRef.current = onRefresh;
+  });
 
   useEffect(() => {
     const node = el.current;
-    if (!node) return;
+    const icon = spinner.current;
+    if (!node || !icon) return;
+    const spin = icon.classList;
+    let startY = 0;
     let dy = 0;
+    let pulling = false;
+    let busy = false;
+    const set = (y: number, animate: boolean) => {
+      node.style.transition = icon.style.transition = animate ? "transform 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms" : "none";
+      node.style.transform = y ? `translateY(${y}px)` : "";
+      icon.style.opacity = String(Math.min(y / 56, 1));
+      icon.style.transform = `translateX(-50%) rotate(${y * 4}deg)`;
+    };
 
     function onTouchStart(e: TouchEvent) {
-      // Only start when the page is already scrolled to the top.
-      if (window.scrollY > 4) return;
-      const t = e.touches[0];
-      if (!t) return;
-      startY.current = t.clientY;
-      pulling.current = false;
+      if (busy || window.scrollY > 4) return;
+      startY = e.touches[0]?.clientY ?? 0;
+      pulling = false;
     }
-
     function onTouchMove(e: TouchEvent) {
-      const t = e.touches[0];
-      if (!t) return;
-      dy = t.clientY - startY.current;
-      if (dy > 10 && window.scrollY <= 4 && !pulling.current) {
-        pulling.current = true;
-        node.style.transition = "none";
-      }
-      if (pulling.current) {
+      if (busy || !startY) return;
+      dy = (e.touches[0]?.clientY ?? startY) - startY;
+      if (dy > 10 && window.scrollY <= 4) pulling = true;
+      if (pulling) {
         e.preventDefault();
-        const clamped = Math.min(dy, 90);
-        node.style.transform = `translateY(${clamped}px)`;
+        set(Math.min(dy * 0.6, 90), false);
       }
     }
-
     async function onTouchEnd() {
-      if (!pulling.current) return;
-      pulling.current = false;
-      node.style.transition = "transform 280ms cubic-bezier(0.22, 1, 0.36, 1)";
-      if (dy > 72) {
-        node.style.transform = "translateY(56px)";
-        try {
-          await onRefresh();
-        } finally {
-          node.style.transform = "translateY(0)";
-        }
-      } else {
-        node.style.transform = "translateY(0)";
+      startY = 0;
+      if (!pulling) return;
+      pulling = false;
+      if (dy * 0.6 < 56) return set(0, true);
+      busy = true;
+      set(56, true);
+      spin.add("animate-spin");
+      try {
+        await refreshRef.current();
+      } finally {
+        spin.remove("animate-spin");
+        set(0, true);
+        busy = false;
       }
-      dy = 0;
     }
 
     node.addEventListener("touchstart", onTouchStart, { passive: true });
@@ -65,26 +70,18 @@ export function PullToRefresh({ onRefresh, children }: { onRefresh: () => Promis
       node.removeEventListener("touchmove", onTouchMove);
       node.removeEventListener("touchend", onTouchEnd);
     };
-  }, [onRefresh]);
+  }, []);
 
   return (
     <div ref={el} className="relative">
       <div
-        className="pointer-events-none absolute left-1/2 top-2 z-20 -translate-x-1/2 grid size-9 place-items-center rounded-full bg-surface shadow-[var(--shadow-ring)] transition-opacity duration-200"
+        ref={spinner}
+        className="pointer-events-none absolute -top-12 left-1/2 z-20 grid size-9 -translate-x-1/2 place-items-center rounded-full bg-surface text-brand-700 opacity-0 shadow-[var(--shadow-ring)]"
         aria-hidden
       >
-        <RefreshIcon className="size-4 animate-spin text-muted" />
+        <RefreshCw className="size-4" />
       </div>
       {children}
     </div>
-  );
-}
-
-function RefreshIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
-      <path d="M21 12a9 9 0 1 1-3-6.7" />
-      <path d="M21 3v5h-5" />
-    </svg>
   );
 }

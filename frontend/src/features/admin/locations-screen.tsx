@@ -5,7 +5,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { AsyncBoundary } from "@/components/async-boundary";
 import { Reveal } from "@/components/motion";
 import { Badge, Button, Field, Input, PageHeader, Panel, ServerErrors } from "@/components/ui";
-import { Dialog } from "@/components/ui/dialog";
+import { Dialog, useConfirm } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { useCreateLocation, useDeleteLocation, useLocations, useUpdateLocation } from "@/features/locations/hooks";
 import type { CreateLocationInput } from "@/services/locations.service";
@@ -28,8 +28,6 @@ function toInput(form: FormState): CreateLocationInput {
 
 export function LocationsScreen() {
   const locations = useLocations();
-  const create = useCreateLocation();
-  const update = useUpdateLocation();
   const deleteOne = useDeleteLocation();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Location | null>(null);
@@ -213,7 +211,7 @@ function AddLocationDialog({ open, onClose, onCreated }: { open: boolean; onClos
     <Dialog open={open} onClose={onClose} title="Add a location" description="Administrative units must be unique." size="md">
       <form id="add-location" onSubmit={onSubmit} className="grid gap-4">
         <ServerErrors error={create.error} fieldErrors={create.fieldErrors} />
-        <FormFields form={form} setForm={setForm} fieldErrors={create.fieldErrors} />
+        <FormFields form={form} setForm={setForm} />
         <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={onClose}>
             Cancel
@@ -265,7 +263,7 @@ function EditLocationDialog({
     <Dialog open={!!location} onClose={onClose} title="Edit location" description="Administrative units must stay unique." size="md">
       <form id="edit-location" onSubmit={onSubmit} className="grid gap-4">
         <ServerErrors error={update.error} fieldErrors={update.fieldErrors} />
-        <FormFields form={form} setForm={setForm} fieldErrors={update.fieldErrors} />
+        <FormFields form={form} setForm={setForm} />
         <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={onClose}>
             Cancel

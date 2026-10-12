@@ -47,7 +47,8 @@ export function Dialog({
       className={cx(
         "m-auto w-[calc(100%-2rem)] rounded-[var(--radius-2xl)] bg-surface p-0 text-ink shadow-[var(--shadow-xl)]",
         "backdrop:bg-brand-950/40 backdrop:backdrop-blur-[2px]",
-        "open:animate-[dialog-in_220ms_var(--ease-out)] max-sm:mb-3 max-sm:mt-auto",
+        "open:animate-[dialog-in_220ms_var(--ease-emphasize)] max-sm:mb-3 max-sm:mt-auto",
+        "transition-all duration-[var(--duration-ui)] ease-[var(--ease-out)]",
         size === "sm" ? "max-w-md" : "max-w-xl",
       )}
     >

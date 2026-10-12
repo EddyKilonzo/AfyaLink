@@ -168,6 +168,10 @@ export function HowItWorks() {
           <svg preserveAspectRatio="none" aria-hidden className="pointer-events-none absolute left-6 right-6 top-[1.4375rem] hidden h-px md:block">
             <line x1="0" y1="0" x2="100%" y2="0" stroke="rgb(20 108 90 / 0.7)" strokeWidth="2" pathLength="1" strokeDasharray="1" strokeDashoffset="1" style={{ animation: "border-draw 1.6s var(--ease-out) 120ms forwards" }} />
           </svg>
+          {/* Flowing pulse that rides the drawn line once the entrance finishes. */}
+          <svg preserveAspectRatio="none" aria-hidden className="pointer-events-none absolute left-6 right-6 top-[1.4375rem] hidden h-px md:block">
+            <line x1="0" y1="0" x2="100%" y2="0" stroke="rgb(33 134 91 / 0.9)" strokeWidth="3" pathLength="1" strokeDasharray="0.25 0.4" style={{ animation: "flow 2.4s var(--ease-out) 1.8s infinite" }} />
+          </svg>
           {STEPS.map(({ Icon, title, text }, i) => (
             <Reveal as="li" key={title} delay={i * 0.08} className="relative flex gap-5 md:flex-col md:gap-0">
               <span className="relative z-10 grid size-12 shrink-0 place-items-center rounded-2xl bg-surface text-brand-600 shadow-[var(--shadow-ring),var(--shadow-sm)]">

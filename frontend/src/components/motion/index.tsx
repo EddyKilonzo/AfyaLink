@@ -11,6 +11,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 export const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 export const EASE_IN_OUT = [0.42, 0, 0.58, 1] as const;
 export const EASE_BACK = [0.34, 1.56, 0.64, 1] as const;
+export const EASE_EMPHASIZE = [0.16, 1, 0.3, 1] as const;
 export const DURATION = { micro: 0.16, ui: 0.24, section: 0.52, page: 0.45 } as const;
 
 export const spring = { type: "spring" as const, stiffness: 320, damping: 32, mass: 0.8 };

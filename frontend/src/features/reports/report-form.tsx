@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLiveQuery } from "dexie-react-hooks";
-import { CheckCircle2, LocateFixed, MapPinOff, Minus, Plus, ShieldCheck } from "lucide-react";
+import { Check, CheckCircle2, LocateFixed, MapPinOff, Minus, Plus, ShieldCheck } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -518,19 +518,5 @@ function SavedConfirmation({ id, onAnother }: { id: string; onAnother: () => voi
         </div>
       </div>
     </Panel>
-  );
-}
-
-function Step({ label, done, active, failed }: { label: string; done?: boolean; active?: boolean; failed?: boolean }) {
-  return (
-    <li
-      className={cx(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 ring-1 ring-inset transition-colors duration-[var(--duration-ui)]",
-        failed ? "bg-failed-bg text-failed ring-failed/15" : done ? "bg-synced-bg text-synced ring-synced/15" : active ? "bg-syncing-bg text-syncing ring-syncing/15" : "bg-sunken text-muted ring-line",
-      )}
-    >
-      {done ? <CheckCircle2 className="size-3.5" strokeWidth={3} aria-hidden /> : <span className={cx("size-1.5 rounded-full bg-current", active && "animate-pulse")} aria-hidden />}
-      {label}
-    </li>
   );
 }

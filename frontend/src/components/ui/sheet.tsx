@@ -28,9 +28,10 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
       aria-label={title}
       className={cx(
         "m-0 mt-auto w-full max-w-none rounded-t-[var(--radius-2xl)] bg-surface p-0 text-ink shadow-[var(--shadow-xl)]",
-        "pb-[env(safe-area-inset-bottom)] open:animate-[sheet-in_280ms_var(--ease-out)]",
-        "sm:m-auto sm:w-[calc(100%-2rem)] sm:max-w-md sm:rounded-[var(--radius-2xl)] sm:open:animate-[dialog-in_220ms_var(--ease-out)]",
+        "pb-[env(safe-area-inset-bottom)] open:animate-[sheet-in_280ms_var(--ease-emphasize)]",
+        "sm:m-auto sm:w-[calc(100%-2rem)] sm:max-w-md sm:rounded-[var(--radius-2xl)] sm:open:animate-[dialog-in_220ms_var(--ease-emphasize)]",
         "backdrop:bg-brand-950/40 backdrop:backdrop-blur-[2px]",
+        "transition-all duration-[var(--duration-ui)] ease-[var(--ease-out)]"
       )}
     >
       <div className="mx-auto mt-2.5 h-1 w-10 rounded-full bg-line-strong sm:hidden" aria-hidden />
@@ -39,7 +40,7 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
         <button
           type="button"
           onClick={onClose}
-          className="grid size-10 place-items-center rounded-xl text-muted transition-colors hover:bg-sunken hover:text-ink"
+          className="grid size-10 place-items-center rounded-xl text-muted transition-all duration-[var(--duration-micro)] hover:bg-sunken hover:text-ink hover:scale-105"
           aria-label="Close"
         >
           <X className="size-[18px]" aria-hidden />

@@ -4,7 +4,7 @@ import { CountUp } from "@/components/motion";
 import { Button } from "./button";
 import { cx } from "./cx";
 
-export type PanelVariant = "raised" | "plain" | "sunken" | "brand" | "outline";
+export type PanelVariant = "raised" | "plain" | "sunken" | "brand" | "outline" | "elevated";
 
 const PANEL: Record<PanelVariant, string> = {
   // Default working surface: white, hairline ring, soft lift.
@@ -15,6 +15,8 @@ const PANEL: Record<PanelVariant, string> = {
   // Dense brand surface for the one thing that should stand out.
   brand: "bg-brand-900 text-white shadow-[var(--shadow-lg)]",
   outline: "border border-line bg-transparent",
+  // Premium elevated surface with deeper shadow for important content
+  elevated: "bg-surface shadow-[var(--shadow-card-hover)]",
 };
 
 /** A surface. Pick the variant by purpose; do not wrap every block in one. */
@@ -33,7 +35,14 @@ export function Panel({
 }) {
   const Component = as;
   return (
-    <Component {...rest} className={cx("rounded-[var(--radius-xl)]", PANEL[variant], className)}>
+    <Component
+      {...rest}
+      className={cx(
+        "rounded-[var(--radius-xl)] transition-all duration-[var(--duration-ui)] ease-[var(--ease-out)]",
+        PANEL[variant],
+        className
+      )}
+    >
       {children}
     </Component>
   );
@@ -105,7 +114,7 @@ export function StatCard({
     error: "bg-failed-bg text-failed",
   }[tone];
   return (
-    <div className={cx("relative overflow-hidden rounded-[var(--radius-xl)] bg-surface p-4 shadow-[var(--shadow-card)] sm:p-5", className)}>
+    <div className={cx("relative overflow-hidden rounded-[var(--radius-xl)] bg-surface p-4 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)] transition-all duration-[var(--duration-ui)] ease-[var(--ease-out)] sm:p-5", className)}>
       <div className="flex items-start justify-between gap-3">
         <p className="text-label">{label}</p>
         {Icon && (
@@ -205,7 +214,7 @@ export function ErrorState({ message, onRetry, className }: { message: string; o
     <div
       role="alert"
       className={cx(
-        "flex flex-col items-start gap-3 rounded-[var(--radius-lg)] bg-failed-bg p-4 text-sm text-failed ring-1 ring-inset ring-failed/15 sm:flex-row sm:items-center",
+        "flex flex-col items-start gap-3 rounded-[var(--radius-lg)] bg-failed-bg p-4 text-sm text-failed ring-1 ring-inset ring-failed/15 sm:flex-row sm:items-center transition-all duration-[var(--duration-ui)]",
         className,
       )}
     >

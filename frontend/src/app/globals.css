@@ -395,6 +395,16 @@ body {
   }
 }
 
+/* Pulse that rides the four-step connecting line once the entrance finishes. */
+@keyframes flow {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: 1;
+  }
+}
+
 /* Hex texture: a few cells breathe slowly. Decorative; frozen with reduced motion. */
 .hex-glow {
   opacity: 0;

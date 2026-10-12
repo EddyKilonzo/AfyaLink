@@ -47,7 +47,7 @@ export function ReportCard({
       </div>
       {trailing}
       {href && (
-        <span className={cx("text-muted/50 transition-transform duration-[var(--duration-micro)] group-hover:translate-x-0.5", view === "grid" ? "absolute right-3 top-3" : "ml-auto")}>
+        <span className={cx("text-muted/50 transition-all duration-[var(--duration-micro)] group-hover:translate-x-0.5", view === "grid" ? "absolute right-3 top-3" : "ml-auto")}>
           <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M7 7h10M7 7l5 5-5 5" />
           </svg>
@@ -57,10 +57,10 @@ export function ReportCard({
   );
 
   const card = cx(
-    "group relative overflow-hidden rounded-[var(--radius-xl)] bg-surface shadow-[var(--shadow-ring),var(--shadow-sm)] transition-[background-color,transform,box-shadow] duration-[var(--duration-micro)]",
+    "group relative overflow-hidden rounded-[var(--radius-xl)] bg-surface shadow-[var(--shadow-ring),var(--shadow-sm)] transition-all duration-[var(--duration-ui)] ease-[var(--ease-out)] will-change-transform",
     view === "grid"
-      ? "p-4 hover:bg-sunken hover:shadow-[var(--shadow-card)]"
-      : "flex items-center gap-3 px-4 py-3 hover:bg-sunken",
+      ? "block p-4 hover:bg-sunken hover:shadow-[var(--shadow-card-hover)] hover:-translate-y-0.5"
+      : "flex items-center gap-3 px-4 py-3 hover:bg-sunken hover:shadow-[var(--shadow-card)]",
     href && "cursor-pointer",
   );
 
@@ -82,8 +82,8 @@ export function ViewToggle({ value, onChange }: { value: "grid" | "list"; onChan
         onClick={() => onChange("grid")}
         aria-pressed={value === "grid"}
         className={cx(
-          "grid size-8 place-items-center rounded-md transition-colors",
-          value === "grid" ? "bg-surface text-ink shadow-[var(--shadow-ring)]" : "hover:text-ink",
+          "grid size-8 place-items-center rounded-md transition-all duration-[var(--duration-micro)] ease-[var(--ease-out)]",
+          value === "grid" ? "bg-surface text-ink shadow-[var(--shadow-ring),var(--shadow-xs)]" : "hover:text-ink hover:bg-surface/50",
         )}
         aria-label="Grid view"
       >
@@ -99,8 +99,8 @@ export function ViewToggle({ value, onChange }: { value: "grid" | "list"; onChan
         onClick={() => onChange("list")}
         aria-pressed={value === "list"}
         className={cx(
-          "grid size-8 place-items-center rounded-md transition-colors",
-          value === "list" ? "bg-surface text-ink shadow-[var(--shadow-ring)]" : "hover:text-ink",
+          "grid size-8 place-items-center rounded-md transition-all duration-[var(--duration-micro)] ease-[var(--ease-out)]",
+          value === "list" ? "bg-surface text-ink shadow-[var(--shadow-ring),var(--shadow-xs)]" : "hover:text-ink hover:bg-surface/50",
         )}
         aria-label="List view"
       >

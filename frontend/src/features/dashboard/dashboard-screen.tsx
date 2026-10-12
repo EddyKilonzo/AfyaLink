@@ -27,7 +27,7 @@ const PERIODS = [
 ];
 
 export function DashboardScreen() {
-  const { user, refresh: refreshAuth } = useAuth();
+  const { user } = useAuth();
   const { counts, syncNow } = useSync();
   const [days, setDays] = useState(7);
   const summary = useAnalyticsSummary(days);
@@ -87,7 +87,8 @@ export function DashboardScreen() {
       </div>
 
       <RecentReports />
-    </div>
+      </div>
+    </PullToRefresh>
   );
 }
 
@@ -144,12 +145,9 @@ function TodayPanel() {
             </Button>
           )}
         </div>
-</div>
-    </Panel>
+      </div>
+    </motion.section>
   );
-  }
-}
-}
 }
 
 function MiniMap() {
@@ -228,5 +226,4 @@ function RecentReports() {
       </div>
     </Panel>
   );
-  }
 }

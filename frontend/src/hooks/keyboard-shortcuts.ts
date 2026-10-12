@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, type ReactNode } from "react";
+import { useEffect } from "react";
 
 /** `n` = new report, `s` = sync, `?` = help. Ignored when typing in a field. */
 export function KeyboardShortcuts() {

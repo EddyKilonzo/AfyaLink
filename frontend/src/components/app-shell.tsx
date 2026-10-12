@@ -16,6 +16,7 @@ import { cx } from "@/components/ui/cx";
 import { useConfirm } from "@/components/ui/dialog";
 import { Sheet } from "@/components/ui/sheet";
 import { useAuth } from "@/features/auth/auth-context";
+import { usePersistentStorage } from "@/hooks/use-persistent-storage";
 import { initials, plural } from "@/lib/format";
 import { HOME_BY_ROLE } from "@/lib/security";
 import { ROLE_LABELS, type UserRole } from "@/types";
@@ -55,6 +56,7 @@ function useSignOut() {
 function ShellFrame({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { user } = useAuth();
+  usePersistentStorage();
   const [moreOpen, setMoreOpen] = useState(false);
   const { collapsed, toggle } = useSidebarCollapsed();
   if (!user) return null;

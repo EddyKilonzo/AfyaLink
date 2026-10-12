@@ -25,14 +25,14 @@ export function Segmented<T extends string | number>({
 }) {
   const group = useId();
   return (
-    <div role="radiogroup" aria-label={label} className={cx("inline-flex rounded-xl bg-sunken p-1 ring-1 ring-inset ring-line", className)}>
+    <div role="radiogroup" aria-label={label} className={cx("inline-flex rounded-xl bg-sunken p-1 ring-1 ring-inset ring-line transition-all duration-[var(--duration-micro)]", className)}>
       {options.map((option) => {
         const selected = option.value === value;
         return (
           <label
             key={String(option.value)}
             className={cx(
-              "relative flex cursor-pointer select-none items-center justify-center gap-1.5 rounded-[9px] font-semibold transition-colors duration-[var(--duration-micro)]",
+              "relative flex cursor-pointer select-none items-center justify-center gap-1.5 rounded-[9px] font-semibold transition-all duration-[var(--duration-micro)] ease-[var(--ease-emphasize)]",
               "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-500/40",
               size === "sm" ? "h-8 px-2.5 text-xs" : "h-9 px-3.5 text-[0.8125rem]",
               selected ? "text-ink" : "text-muted hover:text-ink",

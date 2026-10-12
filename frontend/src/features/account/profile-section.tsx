@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Pencil, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Button, Field, Input, Panel, PanelHeader, ServerErrors } from "@/components/ui";
 import { useToast } from "@/components/ui/toast";

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Panel, PageHeader } from "@/components/ui";
 import { FAQ } from "@/features/landing/sections";
 
-export default function HelpPage() {
+export function HelpScreen() {
   return (
     <>
       <PageHeader
@@ -33,7 +33,7 @@ export default function HelpPage() {
                 </div>
               ))}
             </dl>
-            <p className="px-5 pb-5 text-xs text-muted sm:px-6">Shortcuts are ignored while you're typing in a field.</p>
+            <p className="px-5 pb-5 text-xs text-muted sm:px-6">Shortcuts are ignored while you&apos;re typing in a field.</p>
           </Panel>
 
           <Panel>

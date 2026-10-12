@@ -3,7 +3,7 @@
 import { CheckCircle2, CircleAlert, Info, X } from "lucide-react";
 import { AnimatePresence, motion, type PanInfo } from "motion/react";
 import { createContext, useContext, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { EASE_OUT } from "@/components/motion";
+import { EASE_OUT, EASE_EMPHASIZE } from "@/components/motion";
 import { cx } from "./cx";
 
 type ToastTone = "success" | "error" | "info";
@@ -118,7 +118,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: number)
       initial={{ opacity: 0, y: 24, scale: 0.96 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, x: 40, scale: 0.96, transition: { duration: 0.18, ease: EASE_OUT } }}
-      transition={{ duration: 0.34, ease: EASE_OUT }}
+      transition={{ duration: 0.34, ease: EASE_EMPHASIZE }}
       drag="x"
       dragSnapToOrigin
       dragElastic={0.6}
@@ -127,13 +127,13 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: number)
       onPointerLeave={() => setHeld(false)}
       onFocus={() => setHeld(true)}
       onBlur={() => setHeld(false)}
-      className="pointer-events-auto relative w-full max-w-sm cursor-grab touch-pan-y overflow-hidden rounded-2xl bg-surface/95 shadow-[var(--shadow-ring),var(--shadow-lg)] backdrop-blur-xl active:cursor-grabbing sm:max-w-none"
+      className="pointer-events-auto relative w-full max-w-sm cursor-grab touch-pan-y overflow-hidden rounded-2xl bg-surface/95 shadow-[var(--shadow-ring),var(--shadow-xl)] backdrop-blur-xl active:cursor-grabbing sm:max-w-none"
     >
       <div className="flex items-start gap-3 p-3.5 pr-2.5">
         <motion.span
           initial={{ scale: 0.6, rotate: -12 }}
           animate={{ scale: 1, rotate: 0 }}
-          transition={{ duration: 0.4, ease: EASE_OUT, delay: 0.05 }}
+          transition={{ duration: 0.4, ease: EASE_EMPHASIZE, delay: 0.05 }}
           className={cx("grid size-9 shrink-0 place-items-center rounded-xl", style.icon)}
         >
           <Icon className="size-[18px]" aria-hidden />

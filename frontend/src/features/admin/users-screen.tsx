@@ -4,7 +4,7 @@ import { ChevronRight, Search, ShieldCheck, UserPlus, Users } from "lucide-react
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AsyncBoundary } from "@/components/async-boundary";
-import { Stagger, StaggerItem } from "@/components/motion";
+import { Masonry, MasonryItem } from "@/components/masonry";
 import { Pagination } from "@/components/pagination";
 import { Badge, ButtonLink, FilterSelect, PageHeader, Panel } from "@/components/ui";
 import { cx } from "@/components/ui/cx";
@@ -96,38 +96,42 @@ export function UsersScreen() {
         >
           {(d) => (
             <>
-              <Stagger className="space-y-0.5">
+              <Masonry cols={{ default: 1, sm: 2, lg: 3 }} gap={3} itemClass="contents">
                 {d.items.map((u) => (
-                  <StaggerItem key={u.id}>
-                    <Link href={`/admin/users/${u.id}`} className={cx("group flex items-center gap-3 rounded-2xl px-3 py-3 press-lift transition-[background-color,transform,box-shadow] duration-[var(--duration-micro)] hover:bg-sunken hover:shadow-[var(--shadow-ring)] active:scale-[0.992] sm:gap-4")}>
-                      <span
-                        className={cx(
-                          "grid size-10 shrink-0 place-items-center rounded-full text-xs font-semibold",
-                          u.isActive ? "bg-brand-600 text-white" : "bg-sunken text-muted ring-1 ring-line",
-                        )}
-                        aria-hidden
-                      >
-                        {initials(u.fullName)}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-center gap-1.5 font-semibold text-ink">
-                          <span className="truncate">{u.fullName}</span>
-                          {u.mfaEnabled && <ShieldCheck className="size-3.5 shrink-0 text-synced" aria-label="Two-factor on" />}
-                        </span>
-                        <span className="block truncate text-[0.8125rem] text-muted">{u.email}</span>
-                      </span>
-                      <span className="hidden text-right text-xs text-muted md:block">
-                        {u.lastLoginAt ? `Signed in ${formatRelative(u.lastLoginAt)}` : "Never signed in"}
-                      </span>
-                      <span className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-2">
-                        <Badge tone={u.role === "ADMIN" ? "info" : "brand"}>{u.role === "ADMIN" ? "Admin" : "CHV"}</Badge>
-                        {!u.isActive && <Badge tone="neutral">Deactivated</Badge>}
-                      </span>
-                      <ChevronRight className="size-4 shrink-0 text-muted/60 transition-transform group-hover:translate-x-0.5" aria-hidden />
+                  <MasonryItem key={u.id}>
+                    <Link href={`/admin/users/${u.id}`} className="group block h-full">
+                      <div className={cx("press-lift relative flex h-full flex-col gap-4 rounded-[var(--radius-xl)] bg-surface p-4 shadow-[var(--shadow-ring),var(--shadow-sm)] transition-[background-color,transform,box-shadow] duration-[var(--duration-micro)] hover:bg-sunken hover:shadow-[var(--shadow-card)] sm:p-5")}>
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={cx(
+                              "grid size-11 shrink-0 place-items-center rounded-full text-xs font-semibold",
+                              u.isActive ? "bg-brand-600 text-white" : "bg-sunken text-muted ring-1 ring-line",
+                            )}
+                            aria-hidden
+                          >
+                            {initials(u.fullName)}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="flex items-center gap-1.5 font-semibold text-ink">
+                              <span className="truncate">{u.fullName}</span>
+                              {u.mfaEnabled && <ShieldCheck className="size-3.5 shrink-0 text-synced" aria-label="Two-factor on" />}
+                            </span>
+                            <span className="block truncate text-[0.8125rem] text-muted">{u.email}</span>
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Badge tone={u.role === "ADMIN" ? "info" : "brand"}>{u.role === "ADMIN" ? "Admin" : "CHV"}</Badge>
+                          {!u.isActive && <Badge tone="neutral">Deactivated</Badge>}
+                        </div>
+                        <div className="mt-auto text-xs text-muted">
+                          {u.lastLoginAt ? `Signed in ${formatRelative(u.lastLoginAt)}` : "Never signed in"}
+                        </div>
+                        <ChevronRight className="absolute right-4 top-4 size-4 text-muted/50 transition-transform group-hover:translate-x-0.5" aria-hidden />
+                      </div>
                     </Link>
-                  </StaggerItem>
+                  </MasonryItem>
                 ))}
-              </Stagger>
+              </Masonry>
               <div className="px-2 pb-2">
                 <Pagination page={d} onPageChange={setPage} />
               </div>

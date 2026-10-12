@@ -20,7 +20,7 @@ import { useMemo, useState } from "react";
 import { AsyncBoundary } from "@/components/async-boundary";
 import { Stagger, StaggerItem } from "@/components/motion";
 import { Pagination } from "@/components/pagination";
-import { Button, FilterSelect, PageHeader, Panel } from "@/components/ui";
+import { FilterSelect, PageHeader, Panel } from "@/components/ui";
 import { cx } from "@/components/ui/cx";
 import { formatDate } from "@/lib/format";
 import { AUDIT_ACTIONS, type AuditAction, type AuditLog } from "@/types";
