@@ -6,19 +6,19 @@ import { cx } from "./cx";
 export type BadgeTone = "neutral" | "brand" | "amber" | "success" | "error" | "info";
 
 const TONES: Record<BadgeTone, string> = {
-  neutral: "bg-sunken text-muted ring-line",
-  brand: "bg-brand-50 text-brand-700 ring-brand-200/70",
-  amber: "bg-amber-soft text-amber-ink ring-amber/40",
-  success: "bg-synced-bg text-synced ring-synced/15",
-  error: "bg-failed-bg text-failed ring-failed/15",
-  info: "bg-syncing-bg text-syncing ring-syncing/15",
+  neutral: "bg-sunken text-muted ring-1 ring-inset ring-line",
+  brand: "bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-200/70 shadow-[0_1px_2px_rgb(20_108_90/0.08)]",
+  amber: "bg-amber-soft text-amber-ink ring-1 ring-inset ring-amber/40 shadow-[0_1px_2px_rgb(243_182_106/0.2)]",
+  success: "bg-synced-bg text-synced ring-1 ring-inset ring-synced/15 shadow-[0_1px_2px_rgb(26_110_74/0.12)]",
+  error: "bg-failed-bg text-failed ring-1 ring-inset ring-failed/15 shadow-[0_1px_2px_rgb(196_61_75/0.12)]",
+  info: "bg-syncing-bg text-syncing ring-1 ring-inset ring-syncing/15 shadow-[0_1px_2px_rgb(34_96_159/0.12)]",
 };
 
 export function Badge({ tone = "neutral", icon, children, className }: { tone?: BadgeTone; icon?: ReactNode; children: ReactNode; className?: string }) {
   return (
     <span
       className={cx(
-        "inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-full px-2 text-xs font-semibold ring-1 ring-inset [&_svg]:size-3.5",
+        "inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-full px-2 text-xs font-semibold ring-1 ring-inset [&_svg]:size-3.5 transition-all duration-[var(--duration-micro)] ease-[var(--ease-out)]",
         TONES[tone],
         className,
       )}
@@ -65,8 +65,8 @@ const SEVERITY_DOT: Record<ReportSeverity, string> = {
 
 export function SeverityBadge({ severity, className }: { severity: ReportSeverity; className?: string }) {
   return (
-    <span className={cx("inline-flex items-center gap-1.5 text-xs font-semibold text-ink", className)}>
-      <span className={cx("size-2 rounded-full ring-2 ring-white", SEVERITY_DOT[severity])} aria-hidden />
+    <span className={cx("inline-flex items-center gap-1.5 text-xs font-semibold text-ink transition-all duration-[var(--duration-micro)]", className)}>
+      <span className={cx("size-2 rounded-full ring-2 ring-white shadow-[0_0_0_3px_var(--shadow-glow)]", SEVERITY_DOT[severity])} aria-hidden />
       {SEVERITY_LABELS[severity]}
     </span>
   );
@@ -79,7 +79,7 @@ const REVIEW_ICON: Record<ReportStatus, typeof Clock> = { SUBMITTED: CircleDashe
 export function ReviewStatusBadge({ status }: { status: ReportStatus }) {
   const Icon = REVIEW_ICON[status];
   return (
-    <Badge tone={REVIEW_TONE[status]} icon={<Icon aria-hidden />}>
+    <Badge tone={REVIEW_TONE[status]} icon={<Icon className={cx(status === "SUBMITTED" && "animate-pulse-soft")} aria-hidden />}>
       {STATUS_LABELS[status]}
     </Badge>
   );

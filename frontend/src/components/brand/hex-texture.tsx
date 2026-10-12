@@ -47,6 +47,10 @@ const GLOW_CELLS: [number, number, number][] = [
   [13, 5, 0.2],
   [2, 4, 3.8],
   [16, 3, 1.8],
+  [17, 1, 2.2],
+  [18, 4, 0.6],
+  [0, 2, 3.0],
+  [19, 3, 1.4],
 ];
 
 function cellCenter(col: number, row: number): [number, number] {

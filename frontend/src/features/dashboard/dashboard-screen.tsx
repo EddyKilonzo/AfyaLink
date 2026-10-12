@@ -4,6 +4,7 @@ import { Activity, ArrowRight, CircleAlert, Clock, FilePlus2, FileText, MapPinne
 import { motion } from "motion/react";
 import Link from "next/link";
 import { useState } from "react";
+import { cx } from "@/components/ui/cx";
 import { EASE_OUT, Stagger, StaggerItem } from "@/components/motion";
 import { PullToRefresh } from "@/components/pull-to-refresh";
 import { DrawnBorder } from "@/components/brand/drawn-border";
@@ -117,12 +118,17 @@ function TodayPanel() {
       aria-label="Today"
       className="relative overflow-hidden rounded-[var(--radius-2xl)] bg-brand-900 p-5 text-white shadow-[var(--shadow-lg)] sm:p-7"
     >
-      <HexTexture tone="dark" />
+      <HexTexture tone="dark" glow={true} />
       <DrawnBorder radius={28} tone="dark" delay={300} />
+      {/* Subtle gradient overlay for depth */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-gradient-to-br from-brand-800/60 via-transparent to-brand-950/40"
+      />
       <div className="relative flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
         <div className="max-w-md">
-          <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold text-brand-100 ring-1 ring-inset ring-white/15">
-            <s.Icon className={s.spin ? "size-3.5 animate-spin" : "size-3.5"} aria-hidden />
+          <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold text-brand-100 ring-1 ring-inset ring-white/15 backdrop-blur-sm">
+            <s.Icon className={cx(s.spin ? "size-3.5 animate-spin" : "size-3.5")} aria-hidden />
             {s.label}
           </span>
           <p className="mt-3 text-lg font-medium leading-snug tracking-[-0.01em] text-white sm:text-xl">{message}</p>

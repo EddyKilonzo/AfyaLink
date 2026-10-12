@@ -7,10 +7,11 @@ export const hintId = (name: string) => `${name}-hint`;
 
 const CONTROL =
   "block w-full rounded-[10px] border border-line-strong bg-surface px-3.5 text-[0.9375rem] text-ink shadow-xs " +
-  "placeholder:text-muted/70 transition-[border-color,box-shadow,background-color] duration-[var(--duration-micro)] " +
-  "hover:border-brand-300 focus:border-brand-500 focus:outline-none focus:shadow-[var(--shadow-glow)] " +
+  "placeholder:text-muted/70 transition-[border-color,box-shadow,background-color,transform] duration-[var(--duration-micro)] ease-[var(--ease-emphasize)] " +
+  "hover:border-brand-300 hover:shadow-[0_1px_2px_rgb(11_61_53/0.06),0_4px_12px_-4px_rgb(20_108_90/0.12)] " +
+  "focus:border-brand-500 focus:outline-none focus:shadow-[var(--shadow-glow),0_4px_12px_-4px_rgb(20_108_90/0.16)] focus:-translate-y-[0.5px] " +
   "disabled:cursor-not-allowed disabled:bg-sunken disabled:text-muted read-only:bg-sunken/60 " +
-  "aria-[invalid=true]:border-error aria-[invalid=true]:focus:shadow-[0_0_0_4px_rgb(196_61_75/0.14)]";
+  "aria-[invalid=true]:border-error aria-[invalid=true]:focus:shadow-[0_0_0_4px_rgb(196_61_75/0.14),0_4px_12px_-4px_rgb(196_61_75/0.12)]";
 
 /** Class for native controls not wrapped by the components below. */
 export const inputClass = cx(CONTROL, "mt-1.5 min-h-12 py-2.5");
@@ -119,16 +120,16 @@ export function FilterSelect({ label, className, children, ...props }: SelectHTM
 export const Checkbox = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { label: ReactNode; description?: ReactNode }>(
   function Checkbox({ label, description, className, id, ...props }, ref) {
     return (
-      <label htmlFor={id} className={cx("flex cursor-pointer items-start gap-3 rounded-xl p-1", className)}>
+      <label htmlFor={id} className={cx("flex cursor-pointer items-start gap-3 rounded-xl p-1 transition-colors hover:bg-sunken/50", className)}>
         <span className="relative mt-0.5 grid size-5 shrink-0 place-items-center">
           <input
             ref={ref}
             id={id}
             type="checkbox"
             {...props}
-            className="peer size-5 appearance-none rounded-md border border-line-strong bg-surface shadow-xs transition-colors checked:border-brand-600 checked:bg-brand-600 focus-visible:shadow-[var(--shadow-glow)] focus-visible:outline-none"
+            className="peer size-5 appearance-none rounded-md border border-line-strong bg-surface shadow-xs transition-all duration-[var(--duration-micro)] ease-[var(--ease-emphasize)] checked:border-brand-600 checked:bg-brand-600 focus-visible:shadow-[var(--shadow-glow)] focus-visible:outline-none hover:border-brand-300"
           />
-          <Check className="pointer-events-none absolute size-3.5 text-white opacity-0 peer-checked:opacity-100" strokeWidth={3} aria-hidden />
+          <Check className="pointer-events-none absolute size-3.5 text-white opacity-0 peer-checked:opacity-100 peer-checked:scale-100 scale-75 transition-all duration-[var(--duration-micro)] ease-[var(--ease-emphasize)]" strokeWidth={3} aria-hidden />
         </span>
         <span className="text-sm">
           <span className="font-semibold text-ink">{label}</span>
