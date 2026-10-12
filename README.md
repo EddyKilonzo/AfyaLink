@@ -187,11 +187,10 @@ To run the files by hand, use the httpyac VS Code extension or CLI with the `dev
 
 ## Known limitations
 
-- **UI is placeholder-only.** Final screens wait on the agreed design. The data, offline and sync layers already exist (`frontend/src/features`, `lib`, `services`), but the routes don't call them yet. So the offline flow in the browser (save offline → reload → reconnect → synced) has **not** been tested end to end through the UI. The server half of the flow has been tested.
-- IndexedDB data is not encrypted at rest; anyone with access to an unlocked device profile can read queued reports. Browsers may evict storage under pressure (call `navigator.storage.persist()` once the UI is built).
+- **IndexedDB data is not encrypted at rest;** anyone with access to an unlocked device profile can read queued reports. Browsers may evict storage under pressure (`navigator.storage.persist()` is requested on app load).
 - Lockout counters and the 10-second session-state cache are in memory (per process, reset on restart). Session revocations are in MySQL. Use a shared store such as Redis for lockouts if you run several instances.
 - Audit writes are best effort: if one fails after the action succeeded, the action stands and the failure is logged as `AUDIT WRITE FAILED`. For tamper resistance, give the app's DB user only `INSERT, SELECT` on `audit_logs`.
 - The OpenAPI document (`/api/docs/openapi.json`) is served only outside production, as JSON without Swagger UI. The API's CSP stays `default-src 'none'`, so open the JSON in any OpenAPI viewer.
 - CSP permits `'unsafe-inline'` scripts because Next.js injects inline bootstrap code. Nonce-based CSP is a possible upgrade.
 - Production needs HTTPS (secure cookies, service workers, geolocation), a dedicated least-privilege DB user, backups, and log retention policies.
-- User management, password reset, two-factor, report review, corrections, export and the audit trail exist in the API but have no UI yet. Password reset is admin-driven: there is no email-based self-service reset. SMS, AI prediction and national HIS integration are out of scope.
+- SMS, AI prediction and national HIS integration are out of scope.

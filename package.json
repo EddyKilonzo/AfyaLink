@@ -31,7 +31,9 @@
     "typecheck:backend": "npm --prefix backend run typecheck",
     "db:migrate": "npm --prefix backend run db:migrate",
     "db:seed": "npm --prefix backend run db:seed",
-    "db:status": "npm --prefix backend run db:status"
+    "db:status": "npm --prefix backend run db:status",
+    "test:e2e": "npm --prefix frontend run test:e2e",
+    "lighthouse": "npm --prefix frontend run lighthouse"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
