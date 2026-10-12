@@ -4,6 +4,7 @@ import { Logo } from "@/components/brand/logo";
 import { OfflinePhone } from "@/components/illustrations";
 import { SiteFooter } from "@/components/site/site-footer";
 import { ButtonLink } from "@/components/ui";
+import { InstallButton } from "@/hooks/use-pwa-install";
 
 export const metadata: Metadata = { title: "Offline", robots: { index: false } };
 
@@ -31,6 +32,11 @@ export default function Page() {
           <ButtonLink href="/dashboard" variant="ghost" size="lg" icon={<LayoutDashboard className="size-4" aria-hidden />}>
             Go to dashboard
           </ButtonLink>
+        </div>
+        <div className="mt-6">
+          <InstallButton variant="outline" size="sm" className="w-full">
+            Install AfyaLink on this device
+          </InstallButton>
         </div>
       </main>
       <SiteFooter variant="compact" />

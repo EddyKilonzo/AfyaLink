@@ -10,6 +10,7 @@ import { EASE_OUT, PageTransition } from "@/components/motion";
 import { ConnectivityBanner, SyncNotifier, SyncStatusPill, useSyncSummary } from "@/components/shell/sync-status";
 import { SiteFooter } from "@/components/site/site-footer";
 import { ThemeToggle } from "@/components/theme";
+import { InstallButton } from "@/hooks/use-pwa-install";
 import { NAV, flatNav, pageTitle, type NavItem } from "@/components/shell/nav";
 import { useSidebarCollapsed } from "@/components/shell/use-sidebar";
 import { cx } from "@/components/ui/cx";
@@ -125,6 +126,7 @@ function ShellFrame({ children }: { children: ReactNode }) {
             <p className="hidden truncate text-[0.9375rem] font-semibold text-ink md:block">{pageTitle(role, pathname)}</p>
             <div className="ml-auto flex items-center gap-2">
               <ThemeToggle />
+              <InstallButton size="sm" />
               <SyncStatusPill />
               <UserMenu />
             </div>

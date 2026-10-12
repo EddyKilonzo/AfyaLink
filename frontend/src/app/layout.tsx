@@ -15,6 +15,7 @@ export const metadata: Metadata = {
   description:
     "AfyaLink helps community health volunteers record and share health reports, even without a reliable connection. Administrators review them on live dashboards and maps.",
   applicationName: "AfyaLink",
+  manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "AfyaLink", statusBarStyle: "default" },
 };
 
