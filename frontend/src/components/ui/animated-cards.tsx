@@ -9,7 +9,7 @@ const DURATION_UI = DURATION.ui * 1000;
 
 interface AnimatedCardProps extends Omit<HTMLMotionProps<"div">, "children" | "initial" | "animate" | "exit" | "transition"> {
   children: ReactNode;
-  variant?: "default" | "elevated" | "glass" | "gradient-border" | "interactive";
+  variant?: "default" | "elevated" | "glass" | "gradient-border" | "interactive" | "3d" | "3d-deep" | "3d-floating";
   hover?: boolean;
   staggerIndex?: number;
   className?: string;
@@ -58,8 +58,8 @@ export function AnimatedCard({
     initial: baseStyles,
     animate: animatedStyles,
     exit: exitStyles,
-    hover: hover ? { y: -4, scale: 1.005, boxShadow: "var(--shadow-card-hover)" } : {},
-    tap: { scale: 0.99 },
+    hover: hover ? { y: -6, scale: 1.01, boxShadow: "var(--shadow-floating-hover)" } : {},
+    tap: { scale: 0.98, y: 1, boxShadow: "var(--shadow-pressed)" },
   };
 
   const variantClasses = {
@@ -68,6 +68,9 @@ export function AnimatedCard({
     glass: "glass-card rounded-[var(--radius-xl)]",
     "gradient-border": "relative overflow-hidden bg-surface rounded-[var(--radius-xl)]",
     interactive: "bg-surface rounded-[var(--radius-xl)] shadow-[var(--shadow-card)] border border-line press-lift",
+    "3d": "card-3d",
+    "3d-deep": "card-3d-deep",
+    "3d-floating": "card-3d-floating",
   };
 
   return (

@@ -35,7 +35,11 @@ const SyncContext = createContext<SyncContextValue | null>(null);
  */
 export function SyncProvider({ children }: { children: ReactNode }) {
   const { user, status } = useAuth();
-  const online = useOnlineStatus();
+  const online = useOnlineStatus({ 
+    checkInterval: 30000,
+    endpoint: "/api/health",
+    timeout: 5000,
+  });
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastResult, setLastResult] = useState<SyncRunResult | null>(null);
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);

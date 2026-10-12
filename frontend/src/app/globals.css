@@ -73,10 +73,29 @@
   --shadow-lg: 0 2px 4px rgb(11 61 53 / 0.04), 0 18px 44px -14px rgb(11 61 53 / 0.22), 0 6px 14px -6px rgb(11 61 53 / 0.08);
   --shadow-xl: 0 2px 6px rgb(11 61 53 / 0.05), 0 32px 72px -20px rgb(11 61 53 / 0.32), 0 10px 24px -10px rgb(11 61 53 / 0.14);
   --shadow-ring: 0 0 0 1px rgb(11 61 53 / 0.06);
-  /* Cards and base surfaces: hairline ring + contact shadow + soft ambient lift. */
+  /* Cards and base surfaces: hairline ring + contact shadow + soft ambient lift + depth layers. */
   --shadow-card: 0 0 0 1px rgb(11 61 53 / 0.055), 0 1px 2px rgb(11 61 53 / 0.06), 0 4px 10px -4px rgb(11 61 53 / 0.08), 0 16px 32px -20px rgb(11 61 53 / 0.18);
   --shadow-card-hover: 0 0 0 1px rgb(11 61 53 / 0.07), 0 2px 4px rgb(11 61 53 / 0.06), 0 10px 20px -8px rgb(11 61 53 / 0.14), 0 28px 48px -24px rgb(11 61 53 / 0.26);
   --shadow-glow: 0 0 0 4px rgb(20 108 90 / 0.14);
+  
+  /* Enhanced 3D shadows with depth and realism */
+  --shadow-card-deep: 0 0 0 1px rgb(11 61 53 / 0.05), 0 2px 4px -1px rgb(11 61 53 / 0.08), 0 8px 16px -4px rgb(11 61 53 / 0.12), 0 24px 48px -12px rgb(11 61 53 / 0.18), 0 40px 80px -20px rgb(11 61 53 / 0.14);
+  --shadow-card-deep-hover: 0 0 0 1px rgb(11 61 53 / 0.07), 0 4px 8px -2px rgb(11 61 53 / 0.1), 0 16px 32px -8px rgb(11 61 53 / 0.16), 0 32px 64px -16px rgb(11 61 53 / 0.22), 0 56px 112px -28px rgb(11 61 53 / 0.18);
+  --shadow-floating: 0 0 0 1px rgb(11 61 53 / 0.05), 0 8px 16px -4px rgb(11 61 53 / 0.1), 0 24px 48px -8px rgb(11 61 53 / 0.16), 0 48px 96px -16px rgb(11 61 53 / 0.2), 0 80px 160px -24px rgb(11 61 53 / 0.15);
+  --shadow-floating-hover: 0 0 0 1px rgb(11 61 53 / 0.07), 0 12px 24px -6px rgb(11 61 53 / 0.12), 0 32px 64px -12px rgb(11 61 53 / 0.18), 0 64px 128px -24px rgb(11 61 53 / 0.24), 0 100px 200px -32px rgb(11 61 53 / 0.18);
+  --shadow-pressed: 0 0 0 1px rgb(11 61 53 / 0.06), 0 1px 2px rgb(11 61 53 / 0.08), 0 2px 4px -2px rgb(11 61 53 / 0.08);
+  --shadow-inner: inset 0 2px 4px -1px rgb(11 61 53 / 0.08), inset 0 1px 1px rgb(11 61 53 / 0.06);
+  --shadow-inner-deep: inset 0 4px 8px -2px rgb(11 61 53 / 0.12), inset 0 2px 2px rgb(11 61 53 / 0.08);
+  --shadow-outline: 0 0 0 1px rgb(11 61 53 / 0.06), 0 0 0 4px rgb(255 255 255 / 0.8);
+  
+  /* Colored shadows for brand elements */
+  --shadow-brand-sm: 0 2px 4px -1px rgb(20 108 90 / 0.15), 0 4px 8px -2px rgb(20 108 90 / 0.1);
+  --shadow-brand-md: 0 4px 8px -2px rgb(20 108 90 / 0.2), 0 8px 16px -4px rgb(20 108 90 / 0.15), 0 16px 32px -8px rgb(20 108 90 / 0.1);
+  --shadow-brand-lg: 0 8px 16px -4px rgb(20 108 90 / 0.25), 0 16px 32px -8px rgb(20 108 90 / 0.2), 0 32px 64px -16px rgb(20 108 90 / 0.15);
+  --shadow-amber-sm: 0 2px 4px -1px rgb(243 182 106 / 0.2), 0 4px 8px -2px rgb(243 182 106 / 0.15);
+  --shadow-amber-md: 0 4px 8px -2px rgb(243 182 106 / 0.25), 0 8px 16px -4px rgb(243 182 106 / 0.2), 0 16px 32px -8px rgb(243 182 106 / 0.15);
+  --shadow-error-sm: 0 2px 4px -1px rgb(196 61 75 / 0.2), 0 4px 8px -2px rgb(196 61 75 / 0.15);
+  --shadow-error-md: 0 4px 8px -2px rgb(196 61 75 / 0.25), 0 8px 16px -4px rgb(196 61 75 / 0.2), 0 16px 32px -8px rgb(196 61 75 / 0.15);
 
   /* Global ambient shadow: layered, soft, never a flat grey blur. */
   --shadow-ambient: rgba(0, 0, 0, 0.25) 0px 54px 55px, rgba(0, 0, 0, 0.12) 0px -12px 30px, rgba(0, 0, 0, 0.12) 0px 4px 6px, rgba(0, 0, 0, 0.17) 0px 12px 13px, rgba(0, 0, 0, 0.09) 0px -3px 5px;
@@ -123,6 +142,25 @@
   --shadow-card: 0 0 0 1px rgb(255 255 255 / 0.06), 0 2px 8px -4px rgb(0 0 0 / 0.5), 0 16px 32px -20px rgb(0 0 0 / 0.6);
   --shadow-card-hover: 0 0 0 1px rgb(255 255 255 / 0.09), 0 10px 24px -8px rgb(0 0 0 / 0.6), 0 28px 48px -24px rgb(0 0 0 / 0.7);
   --shadow-glow: 0 0 0 4px rgb(20 108 90 / 0.28);
+  
+  /* Enhanced 3D shadows for dark mode */
+  --shadow-card-deep: 0 0 0 1px rgb(255 255 255 / 0.05), 0 2px 4px -1px rgb(0 0 0 / 0.5), 0 8px 16px -4px rgb(0 0 0 / 0.55), 0 24px 48px -12px rgb(0 0 0 / 0.6), 0 40px 80px -20px rgb(0 0 0 / 0.55);
+  --shadow-card-deep-hover: 0 0 0 1px rgb(255 255 255 / 0.08), 0 4px 8px -2px rgb(0 0 0 / 0.55), 0 16px 32px -8px rgb(0 0 0 / 0.6), 0 32px 64px -16px rgb(0 0 0 / 0.65), 0 56px 112px -28px rgb(0 0 0 / 0.6);
+  --shadow-floating: 0 0 0 1px rgb(255 255 255 / 0.05), 0 8px 16px -4px rgb(0 0 0 / 0.5), 0 24px 48px -8px rgb(0 0 0 / 0.55), 0 48px 96px -16px rgb(0 0 0 / 0.6), 0 80px 160px -24px rgb(0 0 0 / 0.55);
+  --shadow-floating-hover: 0 0 0 1px rgb(255 255 255 / 0.08), 0 12px 24px -6px rgb(0 0 0 / 0.55), 0 32px 64px -12px rgb(0 0 0 / 0.6), 0 64px 128px -24px rgb(0 0 0 / 0.65), 0 100px 200px -32px rgb(0 0 0 / 0.6);
+  --shadow-pressed: 0 0 0 1px rgb(255 255 255 / 0.07), 0 1px 2px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.45);
+  --shadow-inner: inset 0 2px 4px -1px rgb(0 0 0 / 0.5), inset 0 1px 1px rgb(0 0 0 / 0.4);
+  --shadow-inner-deep: inset 0 4px 8px -2px rgb(0 0 0 / 0.55), inset 0 2px 2px rgb(0 0 0 / 0.45);
+  --shadow-outline: 0 0 0 1px rgb(255 255 255 / 0.08), 0 0 0 4px rgb(255 255 255 / 0.1);
+  
+  /* Colored shadows for brand elements in dark mode */
+  --shadow-brand-sm: 0 2px 4px -1px rgb(20 108 90 / 0.25), 0 4px 8px -2px rgb(20 108 90 / 0.2);
+  --shadow-brand-md: 0 4px 8px -2px rgb(20 108 90 / 0.3), 0 8px 16px -4px rgb(20 108 90 / 0.25), 0 16px 32px -8px rgb(20 108 90 / 0.2);
+  --shadow-brand-lg: 0 8px 16px -4px rgb(20 108 90 / 0.35), 0 16px 32px -8px rgb(20 108 90 / 0.3), 0 32px 64px -16px rgb(20 108 90 / 0.25);
+  --shadow-amber-sm: 0 2px 4px -1px rgb(243 182 106 / 0.3), 0 4px 8px -2px rgb(243 182 106 / 0.25);
+  --shadow-amber-md: 0 4px 8px -2px rgb(243 182 106 / 0.35), 0 8px 16px -4px rgb(243 182 106 / 0.3), 0 16px 32px -8px rgb(243 182 106 / 0.25);
+  --shadow-error-sm: 0 2px 4px -1px rgb(196 61 75 / 0.3), 0 4px 8px -2px rgb(196 61 75 / 0.25);
+  --shadow-error-md: 0 4px 8px -2px rgb(196 61 75 / 0.35), 0 8px 16px -4px rgb(196 61 75 / 0.3), 0 16px 32px -8px rgb(196 61 75 / 0.25);
 
   /* Light end of the brand ramp: used as "highlight" tints on surfaces.
      In dark mode these shift darker so a mint tint still reads as a tint. */
@@ -360,6 +398,192 @@ body {
   &:hover::before {
     opacity: 1;
   }
+}
+
+/* Enhanced 3D Shadow Utilities */
+@utility shadow-3d {
+  box-shadow: var(--shadow-card);
+}
+
+@utility shadow-3d-deep {
+  box-shadow: var(--shadow-card-deep);
+}
+
+@utility shadow-3d-deep-hover {
+  transition: box-shadow var(--duration-ui) var(--ease-out), transform var(--duration-ui) var(--ease-out);
+  box-shadow: var(--shadow-card-deep);
+  &:hover {
+    box-shadow: var(--shadow-card-deep-hover);
+    transform: translateY(-4px);
+  }
+  &:active {
+    box-shadow: var(--shadow-pressed);
+    transform: translateY(0) scale(0.99);
+  }
+}
+
+@utility shadow-3d-floating {
+  box-shadow: var(--shadow-floating);
+}
+
+@utility shadow-3d-floating-hover {
+  transition: box-shadow var(--duration-ui) var(--ease-out), transform var(--duration-ui) var(--ease-out);
+  box-shadow: var(--shadow-floating);
+  &:hover {
+    box-shadow: var(--shadow-floating-hover);
+    transform: translateY(-8px);
+  }
+  &:active {
+    box-shadow: var(--shadow-pressed);
+    transform: translateY(0) scale(0.99);
+  }
+}
+
+@utility shadow-pressed {
+  box-shadow: var(--shadow-pressed);
+}
+
+@utility shadow-inner-3d {
+  box-shadow: var(--shadow-inner);
+}
+
+@utility shadow-inner-deep {
+  box-shadow: var(--shadow-inner-deep);
+}
+
+@utility shadow-outline-3d {
+  box-shadow: var(--shadow-outline);
+}
+
+/* Brand colored shadows */
+@utility shadow-brand-sm {
+  box-shadow: var(--shadow-brand-sm);
+}
+
+@utility shadow-brand-md {
+  box-shadow: var(--shadow-brand-md);
+}
+
+@utility shadow-brand-lg {
+  box-shadow: var(--shadow-brand-lg);
+}
+
+@utility shadow-amber-sm {
+  box-shadow: var(--shadow-amber-sm);
+}
+
+@utility shadow-amber-md {
+  box-shadow: var(--shadow-amber-md);
+}
+
+@utility shadow-error-sm {
+  box-shadow: var(--shadow-error-sm);
+}
+
+@utility shadow-error-md {
+  box-shadow: var(--shadow-error-md);
+}
+
+/* Layered card with multiple shadow layers for maximum realism */
+@utility card-3d {
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-line);
+  box-shadow: 
+    var(--shadow-ring),
+    var(--shadow-sm),
+    0 4px 12px -4px rgb(11 61 53 / 0.08),
+    0 12px 24px -8px rgb(11 61 53 / 0.12);
+  transition: transform var(--duration-ui) var(--ease-out), box-shadow var(--duration-ui) var(--ease-out), border-color var(--duration-ui) var(--ease-out);
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 
+      var(--shadow-ring),
+      var(--shadow-md),
+      0 8px 20px -6px rgb(11 61 53 / 0.12),
+      0 20px 40px -12px rgb(11 61 53 / 0.18);
+    border-color: var(--color-line-strong);
+  }
+  &:active {
+    transform: translateY(0) scale(0.99);
+    box-shadow: var(--shadow-ring), var(--shadow-sm), 0 2px 4px -2px rgb(11 61 53 / 0.1);
+  }
+}
+
+@utility card-3d-deep {
+  @apply card-3d;
+  box-shadow: 
+    var(--shadow-ring),
+    0 2px 4px -1px rgb(11 61 53 / 0.08),
+    0 8px 16px -4px rgb(11 61 53 / 0.12),
+    0 24px 48px -12px rgb(11 61 53 / 0.18),
+    0 40px 80px -20px rgb(11 61 53 / 0.14);
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 
+      var(--shadow-ring),
+      0 4px 8px -2px rgb(11 61 53 / 0.1),
+      0 16px 32px -8px rgb(11 61 53 / 0.16),
+      0 32px 64px -16px rgb(11 61 53 / 0.22),
+      0 56px 112px -28px rgb(11 61 53 / 0.18);
+  }
+}
+
+@utility card-3d-floating {
+  @apply card-3d;
+  box-shadow: 
+    var(--shadow-ring),
+    0 8px 16px -4px rgb(11 61 53 / 0.1),
+    0 24px 48px -8px rgb(11 61 53 / 0.16),
+    0 48px 96px -16px rgb(11 61 53 / 0.2),
+    0 80px 160px -24px rgb(11 61 53 / 0.15);
+  &:hover {
+    transform: translateY(-8px);
+    box-shadow: 
+      var(--shadow-ring),
+      0 12px 24px -6px rgb(11 61 53 / 0.12),
+      0 32px 64px -12px rgb(11 61 53 / 0.18),
+      0 64px 128px -24px rgb(11 61 53 / 0.24),
+      0 100px 200px -32px rgb(11 61 53 / 0.18);
+  }
+}
+
+/* Interactive press states for 3D feel */
+@utility press-3d {
+  transition: transform 75ms var(--ease-emphasize), box-shadow 75ms var(--ease-emphasize);
+  &:active {
+    transform: translateY(1px) scale(0.99);
+    box-shadow: var(--shadow-pressed);
+  }
+}
+
+/* Morphing shadow on hover - expands and softens */
+@utility shadow-morph {
+  transition: box-shadow var(--duration-section) var(--ease-emphasize), transform var(--duration-ui) var(--ease-out);
+  &:hover {
+    box-shadow: var(--shadow-floating-hover);
+    transform: translateY(-6px);
+  }
+}
+
+/* Subtle depth for panels */
+@utility panel-depth {
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-line);
+  box-shadow: var(--shadow-ring), var(--shadow-sm);
+}
+
+/* Elevated panel with more depth */
+@utility panel-elevated {
+  @apply panel-depth;
+  box-shadow: var(--shadow-ring), var(--shadow-md), 0 12px 24px -8px rgb(11 61 53 / 0.1);
+}
+
+/* Floating panel - maximum depth */
+@utility panel-floating {
+  @apply panel-depth;
+  box-shadow: var(--shadow-ring), var(--shadow-lg), 0 24px 48px -12px rgb(11 61 53 / 0.15);
 }
 
 /* Animated entrance utilities */
