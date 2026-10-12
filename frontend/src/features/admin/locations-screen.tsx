@@ -1,13 +1,13 @@
 "use client";
 
-import { MapPin, MapPinPlus, Search } from "lucide-react";
+import { MapPin, MapPinPlus, PencilLine, Search, Trash2 } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 import { AsyncBoundary } from "@/components/async-boundary";
 import { Reveal } from "@/components/motion";
 import { Badge, Button, Field, Input, PageHeader, Panel, ServerErrors } from "@/components/ui";
 import { Dialog } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
-import { useCreateLocation, useLocations } from "@/features/locations/hooks";
+import { useCreateLocation, useDeleteLocation, useLocations, useUpdateLocation } from "@/features/locations/hooks";
 import type { CreateLocationInput } from "@/services/locations.service";
 import type { Location } from "@/types";
 
@@ -28,8 +28,29 @@ function toInput(form: FormState): CreateLocationInput {
 
 export function LocationsScreen() {
   const locations = useLocations();
+  const create = useCreateLocation();
+  const update = useUpdateLocation();
+  const deleteOne = useDeleteLocation();
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Location | null>(null);
   const [filter, setFilter] = useState("");
+  const confirm = useConfirm();
+  const toast = useToast();
+
+  async function onDelete(l: Location) {
+    const ok = await confirm({
+      title: `Delete ${l.ward}?`,
+      description: "This can't be undone. Volunteers assigned to this area will lose their location.",
+      confirmLabel: "Delete",
+      tone: "danger",
+    });
+    if (!ok) return;
+    const result = await deleteOne.run(l.id);
+    if (result) {
+      toast.success("Location deleted", `${l.ward}, ${l.county}`);
+      locations.reload();
+    }
+  }
 
   const grouped = useMemo(() => {
     const q = filter.trim().toLowerCase();
@@ -81,8 +102,8 @@ export function LocationsScreen() {
                     </div>
                     <ul className="divide-y divide-line">
                       {items.map((l) => (
-                        <li key={l.id} className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
-                          <span className="min-w-0">
+                        <li key={l.id} className="flex items-center gap-2 px-5 py-3 text-sm">
+                          <span className="min-w-0 flex-1">
                             <span className="block truncate font-medium text-ink">
                               {l.ward}
                               {l.village ? `, ${l.village}` : ""}
@@ -98,6 +119,24 @@ export function LocationsScreen() {
                               "No coordinates"
                             )}
                           </span>
+                          <div className="flex shrink-0 items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => setEditing(l)}
+                              className="grid size-8 place-items-center rounded-lg text-muted transition-colors hover:bg-sunken hover:text-ink"
+                              aria-label={`Edit ${l.ward}`}
+                            >
+                              <PencilLine className="size-4" aria-hidden />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onDelete(l)}
+                              className="grid size-8 place-items-center rounded-lg text-muted transition-colors hover:bg-failed-bg hover:text-failed"
+                              aria-label={`Delete ${l.ward}`}
+                            >
+                              <Trash2 className="size-4" aria-hidden />
+                            </button>
+                          </div>
                         </li>
                       ))}
                     </ul>
@@ -110,7 +149,47 @@ export function LocationsScreen() {
       </AsyncBoundary>
 
       <AddLocationDialog open={open} onClose={() => setOpen(false)} onCreated={locations.reload} />
+      <EditLocationDialog
+        location={editing}
+        onClose={() => setEditing(null)}
+        onSaved={() => {
+          setEditing(null);
+          locations.reload();
+        }}
+      />
     </>
+  );
+}
+
+function FormFields({
+  form,
+  setForm,
+  fieldErrors,
+}: {
+  form: FormState;
+  setForm: (f: FormState | ((prev: FormState) => FormState)) => void;
+  fieldErrors?: Record<string, string[] | undefined>;
+}) {
+  const field = (key: keyof FormState, label: string, opts: { required?: boolean; decimal?: boolean } = {}) => (
+    <Field name={`loc-${key}`} label={label} required={opts.required} optional={!opts.required} error={fieldErrors?.[key]?.[0]}>
+      <Input
+        id={`loc-${key}`}
+        required={opts.required}
+        inputMode={opts.decimal ? "decimal" : undefined}
+        value={form[key]}
+        onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+      />
+    </Field>
+  );
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      {field("county", "County", { required: true })}
+      {field("subCounty", "Sub-county", { required: true })}
+      {field("ward", "Ward", { required: true })}
+      {field("village", "Village")}
+      {field("latitude", "Latitude", { decimal: true })}
+      {field("longitude", "Longitude", { decimal: true })}
+    </div>
   );
 }
 
@@ -130,36 +209,69 @@ function AddLocationDialog({ open, onClose, onCreated }: { open: boolean; onClos
     }
   }
 
-  const field = (key: keyof FormState, label: string, opts: { required?: boolean; decimal?: boolean } = {}) => (
-    <Field name={`loc-${key}`} label={label} required={opts.required} optional={!opts.required}>
-      <Input
-        id={`loc-${key}`}
-        required={opts.required}
-        inputMode={opts.decimal ? "decimal" : undefined}
-        value={form[key]}
-        onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-      />
-    </Field>
-  );
-
   return (
     <Dialog open={open} onClose={onClose} title="Add a location" description="Administrative units must be unique." size="md">
       <form id="add-location" onSubmit={onSubmit} className="grid gap-4">
         <ServerErrors error={create.error} fieldErrors={create.fieldErrors} />
-        <div className="grid gap-4 sm:grid-cols-2">
-          {field("county", "County", { required: true })}
-          {field("subCounty", "Sub-county", { required: true })}
-          {field("ward", "Ward", { required: true })}
-          {field("village", "Village")}
-          {field("latitude", "Latitude", { decimal: true })}
-          {field("longitude", "Longitude", { decimal: true })}
-        </div>
+        <FormFields form={form} setForm={setForm} fieldErrors={create.fieldErrors} />
         <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
           <Button type="submit" loading={create.pending}>
             Add location
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
+
+function EditLocationDialog({
+  location,
+  onClose,
+  onSaved,
+}: {
+  location: Location | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const update = useUpdateLocation();
+  const toast = useToast();
+  const [form, setForm] = useState<FormState>(
+    location
+      ? {
+          county: location.county,
+          subCounty: location.subCounty,
+          ward: location.ward,
+          village: location.village ?? "",
+          latitude: location.latitude ? String(location.latitude) : "",
+          longitude: location.longitude ? String(location.longitude) : "",
+        }
+      : EMPTY,
+  );
+
+  async function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (!location) return;
+    const updated = await update.run({ id: location.id, input: toInput(form) });
+    if (updated) {
+      toast.success("Location updated", `${updated.ward}, ${updated.county}`);
+      onSaved();
+    }
+  }
+
+  return (
+    <Dialog open={!!location} onClose={onClose} title="Edit location" description="Administrative units must stay unique." size="md">
+      <form id="edit-location" onSubmit={onSubmit} className="grid gap-4">
+        <ServerErrors error={update.error} fieldErrors={update.fieldErrors} />
+        <FormFields form={form} setForm={setForm} fieldErrors={update.fieldErrors} />
+        <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" loading={update.pending}>
+            Save changes
           </Button>
         </div>
       </form>

@@ -5,6 +5,7 @@ import { motion } from "motion/react";
 import Link from "next/link";
 import { useState } from "react";
 import { EASE_OUT, Stagger, StaggerItem } from "@/components/motion";
+import { PullToRefresh } from "@/components/pull-to-refresh";
 import { DrawnBorder } from "@/components/brand/drawn-border";
 import { HexTexture } from "@/components/brand/hex-texture";
 import { useSyncSummary } from "@/components/shell/sync-status";
@@ -26,15 +27,20 @@ const PERIODS = [
 ];
 
 export function DashboardScreen() {
-  const { user } = useAuth();
-  const { counts } = useSync();
+  const { user, refresh: refreshAuth } = useAuth();
+  const { counts, syncNow } = useSync();
   const [days, setDays] = useState(7);
   const summary = useAnalyticsSummary(days);
   const firstName = user?.fullName.split(" ")[0] ?? "";
   const waiting = counts.pending + counts.syncing;
 
+  async function refresh() {
+    await Promise.all([summary.reload(), syncNow()]);
+  }
+
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <PullToRefresh onRefresh={refresh}>
+      <div className="space-y-6 sm:space-y-8">
       <header>
         <p className="text-sm text-muted">{new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}</p>
         <h1 className="mt-1 text-h1">
@@ -138,9 +144,12 @@ function TodayPanel() {
             </Button>
           )}
         </div>
-      </div>
-    </motion.section>
+</div>
+    </Panel>
   );
+  }
+}
+}
 }
 
 function MiniMap() {
@@ -219,4 +228,5 @@ function RecentReports() {
       </div>
     </Panel>
   );
+  }
 }
