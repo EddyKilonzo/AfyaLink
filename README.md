@@ -152,7 +152,15 @@ PWA status: the manifest, icons, `/offline` and `sw.js` were checked with curl a
 
 Details: [docs/architecture.md](docs/architecture.md#security).
 
-## Testing status
+## Documentation
+
+| Doc | Contents |
+| --- | --- |
+| [docs/architecture.md](docs/architecture.md) | Module layout, request pipeline, data flow, service worker |
+| [docs/how-it-works.md](docs/how-it-works.md) | The offline-first loop, illustrated |
+| [docs/api.md](docs/api.md) | Endpoints, auth, CSRF, errors, rate limits |
+| [docs/database-schema.md](docs/database-schema.md) | Tables, enums, indexes, checks |
+| [docs/development-plan.md](docs/development-plan.md) | Phased plan and what is done |
 
 Verified on 2026-10-11 (Windows 11, Node 22.15, MariaDB 10.4.32):
 

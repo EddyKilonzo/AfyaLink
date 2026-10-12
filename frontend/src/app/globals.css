@@ -298,7 +298,81 @@ body {
   border-radius: var(--radius-xl);
 }
 
-/* ---------- Keyframes ---------- */
+/* Glass morphism surfaces */
+@utility glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: var(--shadow-ring), var(--shadow-sm);
+}
+
+@utility glass-dark {
+  background: rgba(11, 22, 19, 0.7);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: var(--shadow-ring), var(--shadow-sm);
+}
+
+@utility glass-strong {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: var(--shadow-ring), var(--shadow-md);
+}
+
+@utility glass-card {
+  background: var(--color-surface);
+  backdrop-filter: blur(8px) saturate(150%);
+  -webkit-backdrop-filter: blur(8px) saturate(150%);
+  border: 1px solid var(--color-line);
+  box-shadow: var(--shadow-ring), var(--shadow-sm);
+  border-radius: var(--radius-xl);
+}
+
+@utility glass-card-hover {
+  @apply glass-card;
+  transition: transform var(--duration-ui) var(--ease-out), box-shadow var(--duration-ui) var(--ease-out), border-color var(--duration-ui) var(--ease-out);
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-ring), var(--shadow-md);
+    border-color: var(--color-line-strong);
+  }
+}
+
+/* Gradient borders */
+@utility gradient-border {
+  position: relative;
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: var(--radius-xl);
+    background: linear-gradient(135deg, var(--color-brand-500), var(--color-brand-200), var(--color-amber));
+    opacity: 0;
+    transition: opacity var(--duration-ui) var(--ease-out);
+    z-index: -1;
+  }
+  &:hover::before {
+    opacity: 1;
+  }
+}
+
+/* Animated entrance utilities */
+@utility animate-in {
+  animation: rise var(--duration-section) var(--ease-out) both;
+}
+
+@utility stagger-in {
+  animation: rise var(--duration-section) var(--ease-out) both;
+  animation-delay: calc(var(--stagger-index, 0) * 80ms);
+}
+
+/* Keyframes */
 
 @keyframes float {
   from {
@@ -457,5 +531,221 @@ body {
   /* A timer, not decoration: keep its real duration so toasts stay readable. */
   .toast-timer {
     animation-duration: var(--toast-duration, 4500ms) !important;
+  }
+}
+
+/* Staggered entrance for lists */
+@keyframes stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Scale in from center */
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Slide in from right */
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Slide in from left */
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Shimmer loading */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Bounce subtle */
+@keyframes bounce-subtle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+/* Honeycomb pulse for background */
+@keyframes honeycomb-pulse {
+  0%, 100% {
+    opacity: 0.02;
+  }
+  50% {
+    opacity: 0.06;
+  }
+}
+
+/* Number count up */
+@keyframes count-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Honeycomb background pattern */
+.honeycomb-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='104' viewBox='0 0 60 104' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 26V78L30 104 0 78V26L30 0Z' fill='%23146C5A' fill-opacity='0.03'/%3E%3C/svg%3E");
+  background-size: 60px 104px;
+  animation: honeycomb-pulse 20s ease-in-out infinite;
+}
+
+.honeycomb-bg-light {
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='104' viewBox='0 0 60 104' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 26V78L30 104 0 78V26L30 0Z' fill='%23146C5A' fill-opacity='0.03'/%3E%3C/svg%3E");
+}
+
+.honeycomb-bg-dark {
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='104' viewBox='0 0 60 104' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 26V78L30 104 0 78V26L30 0Z' fill='%23DDF5EA' fill-opacity='0.04'/%3E%3C/svg%3E");
+}
+
+/* Animated grid pattern */
+.grid-pattern {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  pointer-events: none;
+  background-image: 
+    linear-gradient(rgba(20, 108, 90, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20, 108, 90, 0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.dark .grid-pattern {
+  background-image: 
+    linear-gradient(rgba(221, 245, 234, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(221, 245, 234, 0.04) 1px, transparent 1px);
+}
+
+/* Gradient mesh background */
+.gradient-mesh {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  pointer-events: none;
+  background: 
+    radial-gradient(ellipse 80% 50% at 20% 20%, rgba(20, 108, 90, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(243, 182, 106, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 50% at 50% 50%, rgba(20, 108, 90, 0.04) 0%, transparent 70%);
+}
+
+.dark .gradient-mesh {
+  background: 
+    radial-gradient(ellipse 80% 50% at 20% 20%, rgba(20, 108, 90, 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(243, 182, 106, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 50% at 50% 50%, rgba(20, 108, 90, 0.06) 0%, transparent 70%);
+}
+
+/* Utility classes for animations */
+.animate-stagger-in {
+  animation: stagger-in var(--duration-section) var(--ease-out) both;
+}
+
+.animate-scale-in {
+  animation: scale-in var(--duration-ui) var(--ease-out) both;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right var(--duration-ui) var(--ease-out) both;
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left var(--duration-ui) var(--ease-out) both;
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 2s var(--ease-out) infinite;
+}
+
+.animate-count-up {
+  animation: count-up var(--duration-section) var(--ease-out) both;
+}
+
+.shimmer {
+  background: linear-gradient(90deg, var(--color-sunken) 25%, var(--color-line) 50%, var(--color-sunken) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Stagger children */
+.stagger-children > * {
+  animation: stagger-in var(--duration-section) var(--ease-out) both;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 80ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 160ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 240ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 320ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 400ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 480ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 560ms; }
+
+/* Focus ring utility */
+.focus-ring {
+  &:focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+/* Text gradient */
+.text-gradient {
+  background: linear-gradient(135deg, var(--color-brand-600), var(--color-brand-400));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Scrollbar hide */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
   }
 }

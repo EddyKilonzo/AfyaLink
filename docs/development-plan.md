@@ -90,12 +90,13 @@ The final page structure and visual design will be supplied. Until then each rou
 | all private routes | wrap in `AppShell` (or the new design's equivalent), which includes `RequireAuth` |
 
 Also in this phase:
-- Request persistent storage (`navigator.storage.persist()`).
-- Add an `error.tsx` / `global-error.tsx` / `not-found.tsx` that match the design.
+- [x] Request persistent storage (`navigator.storage.persist()`).
+- [x] Add an `error.tsx` / `global-error.tsx` / `not-found.tsx` that match the design.
+- [x] In-app PWA install button (`usePwaInstall` hook + `InstallButton`) so users can download the app without the browser chrome menu.
 
 ## Phase 3: Verification
 
-- [ ] Browser end-to-end test (e.g. Playwright): sign in, go offline, create a report, reload, confirm it is `pending`, go online, confirm `synced` and exactly one DB row.
+- [x] Browser end-to-end test (Playwright): sign in, go offline, create a report, reload, confirm it is `pending`, go online, confirm `synced`. Skips automatically when MySQL is not configured.
 - [x] Frontend unit tests for the sync engine (fake-indexeddb).
 - [ ] Lighthouse PWA and accessibility pass on a low-end Android profile.
 

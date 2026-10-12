@@ -1,33 +1,26 @@
 "use client";
 
 import { useEffect } from "react";
-import { useToast } from "@/components/ui/toast";
 
+/**
+ * Ask the browser to keep IndexedDB around. Browsers may evict storage under
+ * pressure (the sync queue lives in Dexie/IndexedDB), and `persist()` is the
+ * only signal that asks them not to. Best effort: ignored where unsupported.
+ */
 export function usePersistentStorage() {
-  const toast = useToast();
-
   useEffect(() => {
-    if (!("storage" in navigator) || !("persist" in navigator.storage)) return;
-
+    const storage = (navigator as Navigator & { storage?: StorageManager }).storage;
+    if (!storage?.persist) return;
     let cancelled = false;
-
-    navigator.storage.persisted().then((persisted) => {
-      if (cancelled) return;
-      if (persisted) return;
-
-      navigator.storage.persist().then((granted) => {
+    storage
+      .persist()
+      .then((granted) => {
         if (cancelled) return;
-        if (!granted) {
-          toast.info(
-            "Storage not persisted",
-            "Your offline reports may be cleared if the device runs low on space. You can enable persistence in browser settings."
-          );
-        }
-      });
-    });
-
+        if (granted) console.info("[AfyaLink] IndexedDB persistence granted.");
+      })
+      .catch((error) => console.warn("[AfyaLink] Could not request persistent storage.", error));
     return () => {
       cancelled = true;
     };
-  }, [toast]);
+  }, []);
 }

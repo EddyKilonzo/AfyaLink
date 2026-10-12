@@ -31,3 +31,14 @@ export {
   StatCard,
   type PanelVariant,
 } from "./surface";
+export {
+  AnimatedCard,
+  MetricCard,
+  StatCard as EnhancedStatCard,
+  InfoCard,
+  FeatureCard,
+  CardGrid,
+  DashboardGrid,
+} from "./animated-cards";
+export { ToastProvider, useToast, type ToastApi, type ToastInput } from "./toast";
+export { HoneycombBackground, GradientMeshBackground, GridPatternBackground } from "@/components/brand/honeycomb-bg";
