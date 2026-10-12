@@ -43,6 +43,23 @@ export type ChangePasswordValues = z.infer<typeof changePasswordSchema>;
 const PHONE = /^\+?[0-9]{7,15}$/;
 const NAME = /^[\p{L}\p{M} .'-]+$/u;
 
+/** The subset of the user record a volunteer can change themselves. */
+export const profileSchema = z
+  .object({
+    fullName: z
+      .string()
+      .trim()
+      .min(2, "At least 2 characters.")
+      .max(120)
+      .regex(NAME, "Letters, spaces, apostrophes, dots and hyphens only."),
+    phone: z
+      .string()
+      .trim()
+      .optional()
+      .refine((v) => !v || PHONE.test(v), "7–15 digits, optionally starting with +."),
+  });
+export type ProfileValues = z.infer<typeof profileSchema>;
+
 export const userFormSchema = z.object({
   fullName: z
     .string()

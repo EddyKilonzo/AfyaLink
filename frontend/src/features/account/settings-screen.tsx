@@ -15,6 +15,7 @@ import { useSync } from "@/features/sync/sync-context";
 import { formatDateTime, initials, plural } from "@/lib/format";
 import { ROLE_LABELS } from "@/types";
 import { useChangePassword, useLogoutEverywhere, useMfa } from "./hooks";
+import { ProfileSection } from "./profile-section";
 
 export function SettingsScreen() {
   const { user } = useAuth();
@@ -22,6 +23,7 @@ export function SettingsScreen() {
   return (
     <div className="mx-auto max-w-3xl">
       <PageHeader title="Settings" description="Your account and how you sign in." />
+      <ProfileSection />
       <div className="space-y-5">
         <Panel className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:p-6">
           <span className="grid size-16 shrink-0 place-items-center rounded-[20px] bg-brand-600 text-xl font-semibold text-white shadow-[var(--shadow-md)]">

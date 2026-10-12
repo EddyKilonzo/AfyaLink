@@ -1,6 +1,9 @@
+"use client";
+
 import { Suspense, type ReactNode } from "react";
 import { AppShell } from "@/components/app-shell";
 import { Spinner } from "@/components/ui";
+import { KeyboardShortcuts } from "@/hooks/keyboard-shortcuts";
 
 /**
  * Every route in this group needs a signed-in user (any role). The shell reads
@@ -22,6 +25,7 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
         </div>
       }
     >
+      <KeyboardShortcuts />
       <AppShell>{children}</AppShell>
     </Suspense>
   );

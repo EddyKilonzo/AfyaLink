@@ -30,6 +30,7 @@ interface AuthContextValue {
   /** Ends every session on every device, then signs out here. */
   logoutEverywhere: () => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<User>;
+  updateProfile: (input: { fullName: string; phone?: string | null }) => Promise<User>;
   refresh: () => Promise<void>;
   hasRole: (...roles: UserRole[]) => boolean;
 }
@@ -142,11 +143,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [signedIn],
   );
 
+  const updateProfile = useCallback(
+    async (input: { fullName: string; phone?: string | null }) => {
+      const next = await authService.updateProfile(input);
+      await signedIn(next);
+      return next;
+    },
+    [signedIn],
+  );
+
   const hasRole = useCallback((...roles: UserRole[]) => Boolean(user && roles.includes(user.role)), [user]);
 
   const value = useMemo(
-    () => ({ status, user, offlineSession, sessionExpired, login, logout, logoutEverywhere, changePassword, refresh, hasRole }),
-    [status, user, offlineSession, sessionExpired, login, logout, logoutEverywhere, changePassword, refresh, hasRole],
+    () => ({ status, user, offlineSession, sessionExpired, login, logout, logoutEverywhere, changePassword, updateProfile, refresh, hasRole }),
+    [status, user, offlineSession, sessionExpired, login, logout, logoutEverywhere, changePassword, updateProfile, refresh, hasRole],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

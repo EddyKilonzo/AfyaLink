@@ -36,3 +36,9 @@ export function useMfa() {
   });
   return { setup, enable, disable };
 }
+
+/** Lets a volunteer change their display name and phone. */
+export function useUpdateProfile() {
+  const { updateProfile } = useAuth();
+  return useMutation((input: { fullName: string; phone?: string | null }) => updateProfile(input));
+}

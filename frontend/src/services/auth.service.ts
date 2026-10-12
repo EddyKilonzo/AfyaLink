@@ -47,6 +47,15 @@ export const authService = {
     return res.user;
   },
 
+  /** Updates the display name and phone. The email stays fixed per account. */
+  async updateProfile(input: { fullName: string; phone?: string | null }): Promise<User> {
+    const res = await apiJson<{ user: User }>("/auth/profile", "PATCH", {
+      fullName: input.fullName,
+      phone: input.phone ?? null,
+    });
+    return res.user;
+  },
+
   mfa: {
     /** Step 1: returns the secret and an otpauth:// URL to show as a QR code. */
     setup: (password: string) => apiJson<MfaSetup>("/auth/mfa/setup", "POST", { password }),
