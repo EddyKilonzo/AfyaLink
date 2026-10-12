@@ -12,3 +12,4 @@ export { ReviewDashboard } from "./review-dashboard";
 export { CommunityCare } from "./community-care";
 export { EmptyInbox } from "./empty-inbox";
 export { EmptyMap } from "./empty-map";
+export { SignalWave, SyncStatusStrip } from "./animated-sync";

@@ -1,12 +1,12 @@
 "use client";
 
-import { ChevronRight, Search, ShieldCheck, UserPlus, Users } from "lucide-react";
+import { ChevronRight, Mail, Search, ShieldCheck, UserPlus, Users } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AsyncBoundary } from "@/components/async-boundary";
 import { Masonry, MasonryItem } from "@/components/masonry";
 import { Pagination } from "@/components/pagination";
-import { Badge, ButtonLink, FilterSelect, PageHeader, Panel } from "@/components/ui";
+import { Badge, ButtonLink, FilterSelect, PageHeader, Panel, StatCard } from "@/components/ui";
 import { cx } from "@/components/ui/cx";
 import { formatRelative, initials } from "@/lib/format";
 import { ROLE_LABELS, USER_ROLES, type UserRole } from "@/types";
@@ -29,6 +29,10 @@ export function UsersScreen() {
   }, [search]);
 
   const users = useUsers({ page, limit: 20, role: role || undefined, isActive: active === "" ? undefined : active === "true", q: q || undefined });
+  const total = users.data?.total ?? 0;
+  const admins = users.data?.items.filter((u) => u.role === "ADMIN").length ?? 0;
+  const chvs = users.data?.items.filter((u) => u.role === "CHV").length ?? 0;
+  const mfaOn = users.data?.items.filter((u) => u.mfaEnabled).length ?? 0;
 
   return (
     <>
@@ -41,6 +45,13 @@ export function UsersScreen() {
           </ButtonLink>
         }
       />
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard label="Total" value={total} icon={Users} hint="Accounts" />
+        <StatCard label="Administrators" value={admins} icon={ShieldCheck} hint="With admin access" />
+        <StatCard label="Volunteers" value={chvs} icon={Mail} hint="CHV role" />
+        <StatCard label="Two-factor" value={mfaOn} icon={ShieldCheck} hint="MFA enabled" tone="brand" />
+      </div>
 
       <div className="mb-4 flex flex-col gap-2 sm:flex-row">
         <div className="relative flex-1">

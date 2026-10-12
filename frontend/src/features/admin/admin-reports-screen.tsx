@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight, ClipboardCheck, FileSearch, LayoutGrid, List } from "lucide-react";
+import { ChevronRight, ClipboardCheck, FileSearch, LayoutGrid, List, Users } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Masonry, MasonryItem } from "@/components/masonry";
@@ -71,6 +71,11 @@ export function AdminReportsScreen() {
       <PageHeader
         title="Report review"
         description="Check each report, then mark it reviewed or actioned. Reports only move forward."
+        action={
+          <Link href="/admin" className="group inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm font-medium text-ink shadow-xs transition-[background-color,transform] hover:bg-sunken">
+            <Users className="size-4" aria-hidden /> Network
+          </Link>
+        }
       />
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -89,40 +94,42 @@ export function AdminReportsScreen() {
             { value: "ALL", label: "All" },
           ]}
         />
-        <FilterSelect
-          label="Severity"
-          value={severity}
-          onChange={(e) => {
-            setSeverity(e.target.value as ReportSeverity | "");
-            setPage(1);
-          }}
-        >
-          <option value="">All severities</option>
-          {REPORT_SEVERITIES.map((s) => (
-            <option key={s} value={s}>
-              {SEVERITY_LABELS[s]}
-            </option>
-          ))}
-        </FilterSelect>
-        <div className="ml-auto flex items-center gap-1 rounded-lg bg-sunken p-0.5 text-muted" role="group" aria-label="View mode">
-          <button
-            type="button"
-            aria-pressed={view === "grid"}
-            onClick={() => setView("grid")}
-            className="grid size-8 place-items-center rounded-md transition-colors"
-            aria-label="Grid view"
+        <div className="flex items-center gap-2">
+          <FilterSelect
+            label="Severity"
+            value={severity}
+            onChange={(e) => {
+              setSeverity(e.target.value as ReportSeverity | "");
+              setPage(1);
+            }}
           >
-            <LayoutGrid className="size-4" aria-hidden />
-          </button>
-          <button
-            type="button"
-            aria-pressed={view === "list"}
-            onClick={() => setView("list")}
-            className="grid size-8 place-items-center rounded-md transition-colors"
-            aria-label="List view"
-          >
-            <List className="size-4" aria-hidden />
-          </button>
+            <option value="">All severities</option>
+            {REPORT_SEVERITIES.map((s) => (
+              <option key={s} value={s}>
+                {SEVERITY_LABELS[s]}
+              </option>
+            ))}
+          </FilterSelect>
+          <div className="flex items-center gap-1 rounded-lg bg-sunken p-0.5 text-muted" role="group" aria-label="View mode">
+            <button
+              type="button"
+              aria-pressed={view === "grid"}
+              onClick={() => setView("grid")}
+              className="grid size-8 place-items-center rounded-md transition-colors"
+              aria-label="Grid view"
+            >
+              <LayoutGrid className="size-4" aria-hidden />
+            </button>
+            <button
+              type="button"
+              aria-pressed={view === "list"}
+              onClick={() => setView("list")}
+              className="grid size-8 place-items-center rounded-md transition-colors"
+              aria-label="List view"
+            >
+              <List className="size-4" aria-hidden />
+            </button>
+          </div>
         </div>
       </div>
 

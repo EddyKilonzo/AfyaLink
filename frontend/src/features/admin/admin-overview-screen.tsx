@@ -1,6 +1,20 @@
 "use client";
 
-import { Activity, ArrowRight, ClipboardCheck, Download, FileText, Flame, Landmark, MapPin } from "lucide-react";
+import {
+  Activity,
+  ArrowRight,
+  BarChart3,
+  Building2,
+  CheckCircle2,
+  ClipboardCheck,
+  Download,
+  FileText,
+  Flame,
+  Globe,
+  Landmark,
+  MapPin,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { Stagger, StaggerItem } from "@/components/motion";
@@ -39,7 +53,7 @@ export function AdminOverviewScreen() {
     if (exporter.error) toast.error("Export failed", exporter.error);
   }, [exporter.error, toast]);
 
-  return (
+return (
     <div className="space-y-6 sm:space-y-8">
       <PageHeader
         title="Overview"
@@ -56,8 +70,8 @@ export function AdminOverviewScreen() {
 
       {summary.error && !s && <ErrorState message={summary.error} onRetry={summary.reload} />}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-<Link href="/admin/reports" className="group rounded-[var(--radius-lg)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-brand-500/35">
+      <section aria-label="Key metrics" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Link href="/admin/reports" className="group rounded-[var(--radius-lg)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-brand-500/35">
           <StatCard
             label="Awaiting review"
             value={s?.pendingReview ?? null}
@@ -70,14 +84,41 @@ export function AdminOverviewScreen() {
         <StatCard label="Reports" value={s?.totals.reports ?? null} icon={FileText} hint={`Last ${days} days`} />
         <StatCard label="Cases" value={s?.totals.cases ?? null} icon={Activity} hint={`Last ${days} days`} />
         <StatCard label="Counties reporting" value={s?.byCounty.length ?? null} icon={Landmark} hint="With at least one report" />
-      </div>
+      </section>
 
-      <Panel>
-        <PanelHeader title="Reports over time" description={`Reports received per day, last ${days} days`} />
-        <div className="px-3 pb-4 pt-4 sm:px-5">
-          {s ? <DailyReportsChart byDay={s.byDay} since={s.since} days={s.periodDays} compact={days <= 7} height={260} /> : <Skeleton className="h-64 w-full rounded-xl" />}
-        </div>
-      </Panel>
+      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+        <Panel>
+          <PanelHeader title="Reports over time" description={`Reports received per day, last ${days} days`} />
+          <div className="px-3 pb-4 pt-4 sm:px-5">
+            {s ? <DailyReportsChart byDay={s.byDay} since={s.since} days={s.periodDays} compact={days <= 7} height={260} /> : <Skeleton className="h-64 w-full rounded-xl" />}
+          </div>
+        </Panel>
+        <Panel variant="elevated">
+          <PanelHeader title="Where it matters" description="Counties with the most reports" />
+          <div className="px-5 pb-5 pt-4">
+            {s ? (
+              s.byCounty.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted">No reports in this period.</p>
+              ) : (
+                <div className="space-y-3">
+                  {s.byCounty.slice(0, 5).map((c, i) => (
+                    <div key={c.county} className="flex items-center gap-3">
+                      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-50 text-xs font-semibold text-brand-700">{i + 1}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-ink">{c.county}</p>
+                        <p className="text-xs text-muted">{c.reports} reports</p>
+                      </div>
+                      <BarChart3 className="size-4 text-muted" aria-hidden />
+                    </div>
+                  ))}
+                </div>
+              )
+            ) : (
+              <LoadingState rows={5} />
+            )}
+          </div>
+        </Panel>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Breakdown title="By category" description="Number of reports" loading={!s} empty={s?.byCategory.length === 0}>
@@ -96,7 +137,10 @@ export function AdminOverviewScreen() {
 
       <div className="grid gap-6 xl:grid-cols-[1.2fr_1fr]">
         <GeoPanel days={days} />
-        <RecentSubmissions />
+        <div className="grid gap-6">
+          <RecentSubmissions />
+          <NetworkPanel s={s} />
+        </div>
       </div>
     </div>
   );
@@ -108,6 +152,39 @@ function Breakdown({ title, description, loading, empty, children }: { title: st
       <PanelHeader title={title} description={description} />
       <div className="px-4 pb-5 pt-4 sm:px-6">
         {loading ? <Skeleton className="h-40 w-full rounded-xl" /> : empty ? <p className="py-8 text-center text-sm text-muted">No reports in this period.</p> : children}
+      </div>
+    </Panel>
+  );
+}
+
+function NetworkPanel({ s }: { s: ReturnType<typeof useAnalyticsSummary>["data"] }) {
+  const counties = s?.byCounty.length ?? 0;
+  const reviewed = s?.byStatus.find((x) => x.status === "REVIEWED")?.count ?? 0;
+  const submitted = s?.byStatus.find((x) => x.status === "SUBMITTED")?.count ?? 0;
+  return (
+    <Panel>
+      <PanelHeader title="Network" description="Reach of reporting in this period" />
+      <div className="grid grid-cols-2 gap-3 p-5">
+        <div className="rounded-xl bg-sunken p-4">
+          <Globe className="size-5 text-brand-600" aria-hidden />
+          <p className="mt-2 text-metric text-ink">{counties || "—"}</p>
+          <p className="text-xs text-muted">Counties reached</p>
+        </div>
+        <div className="rounded-xl bg-sunken p-4">
+          <Users className="size-5 text-brand-600" aria-hidden />
+          <p className="mt-2 text-metric text-ink">{s?.byCounty.length ?? "—"}</p>
+          <p className="text-xs text-muted">Wards mapped</p>
+        </div>
+        <div className="rounded-xl bg-sunken p-4">
+          <Building2 className="size-5 text-brand-600" aria-hidden />
+          <p className="mt-2 text-metric text-ink">{submitted || "—"}</p>
+          <p className="text-xs text-muted">Awaiting review</p>
+        </div>
+        <div className="rounded-xl bg-sunken p-4">
+          <CheckCircle2 className="size-5 text-brand-600" aria-hidden />
+          <p className="mt-2 text-metric text-ink">{reviewed || "—"}</p>
+          <p className="text-xs text-muted">Reviewed</p>
+        </div>
       </div>
     </Panel>
   );
@@ -134,7 +211,7 @@ function GeoPanel({ days }: { days: number }) {
           />
         }
       />
-      <div className="relative mt-4 h-80 border-y border-line">
+      <div className="relative h-80 border-y border-line">
         {map.error && !map.data ? (
           <div className="p-4">
             <ErrorState message={map.error} onRetry={map.reload} />

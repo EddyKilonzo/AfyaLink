@@ -1,6 +1,7 @@
 import {
   ArrowRight,
   BarChart3,
+  BellRing,
   CheckCircle2,
   ClipboardCheck,
   Clock,
@@ -9,14 +10,16 @@ import {
   FilePlus2,
   FlaskConical,
   HardDrive,
+  MapPinned,
   RefreshCw,
   ShieldCheck,
   Smartphone,
   UploadCloud,
+  Users,
 } from "lucide-react";
 import { DrawnBorder } from "@/components/brand/drawn-border";
 import { HexTexture } from "@/components/brand/hex-texture";
-import { CommunityCare, ConnectedVillages, SyncUpload } from "@/components/illustrations";
+import { EmptyMap, SignalWave, SyncStatusStrip, SyncUpload } from "@/components/illustrations";
 import { Reveal } from "@/components/motion";
 import { ButtonAnchor, ButtonLink } from "@/components/ui";
 
@@ -93,14 +96,34 @@ export function Features() {
           </Reveal>
 
           <Reveal className="md:col-span-3" delay={0.08}>
-            <article className="h-full rounded-[var(--radius-2xl)] bg-brand-50 p-7 shadow-[var(--shadow-ring),var(--shadow-sm)]">
+            <article className="h-full rounded-[var(--radius-2xl)] bg-surface p-7 shadow-[var(--shadow-ring),var(--shadow-sm)]">
               <BarChart3 className="size-6 text-brand-600" aria-hidden />
               <h3 className="mt-5 text-xl font-semibold tracking-tight text-ink">Actionable dashboards</h3>
               <p className="mt-3 max-w-sm leading-relaxed text-muted">Trends by day, county and condition, plus a review queue so every report is read and followed up.</p>
               <div className="mt-6 flex h-24 items-end gap-2" aria-hidden>
                 {[38, 52, 44, 66, 58, 80, 72, 92].map((h, i) => (
-                  <span key={i} className="flex-1 rounded-t-md bg-[#0b8f72]" style={{ height: `${h}%`, opacity: 0.45 + i * 0.07 }} />
+                  <span key={i} className="flex-1 rounded-t-md bg-brand-600" style={{ height: `${h}%`, opacity: 0.45 + i * 0.07 }} />
                 ))}
+              </div>
+            </article>
+          </Reveal>
+
+          <Reveal className="md:col-span-6" delay={0.12}>
+            <article className="grid gap-6 rounded-[var(--radius-2xl)] bg-surface p-7 shadow-[var(--shadow-ring),var(--shadow-sm)] sm:grid-cols-3 sm:p-9">
+              <div className="flex flex-col gap-3">
+                <BellRing className="size-6 text-brand-600" aria-hidden />
+                <h3 className="text-lg font-semibold tracking-tight text-ink">Real-time alerts</h3>
+                <p className="text-sm leading-relaxed text-muted">Critical reports surface immediately so supervisors can respond the same day.</p>
+              </div>
+              <div className="flex flex-col gap-3">
+                <Users className="size-6 text-brand-600" aria-hidden />
+                <h3 className="text-lg font-semibold tracking-tight text-ink">Role-based access</h3>
+                <p className="text-sm leading-relaxed text-muted">Volunteers see their own area. Administrators see the whole picture, with every action audited.</p>
+              </div>
+              <div className="flex flex-col gap-3">
+                <MapPinned className="size-6 text-brand-600" aria-hidden />
+                <h3 className="text-lg font-semibold tracking-tight text-ink">One tap to act</h3>
+                <p className="text-sm leading-relaxed text-muted">Review, action, export and audit from one queue. Nothing falls through the cracks.</p>
               </div>
             </article>
           </Reveal>
@@ -157,7 +180,7 @@ export function HowItWorks() {
             <p className="text-lead mt-4 text-muted">Four steps, and the volunteer only has to do the first one.</p>
           </Reveal>
           <Reveal delay={0.06} className="max-md:hidden">
-            <CommunityCare className="w-full" />
+            <SignalWave className="w-full" />
           </Reveal>
         </div>
 
@@ -256,6 +279,29 @@ export function Showcase() {
   );
 }
 
+/* ------------------------------------------------- Animated sync demo */
+
+export function SyncDemo() {
+  return (
+    <section id="sync" className="scroll-mt-20 py-20 sm:py-28">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <div className="grid items-center gap-10 lg:grid-cols-[1fr_1fr] lg:gap-16">
+          <Reveal>
+            <h2 className="text-h2 text-brand-950">Watch the sync happen.</h2>
+            <p className="text-lead mt-4 text-muted">
+              A report starts on a phone, waits through a dropped connection, and lands on the server — confirmed, not assumed.
+            </p>
+            <SyncStatusStrip className="mt-6" />
+          </Reveal>
+          <Reveal delay={0.08} className="flex justify-center">
+            <SignalWave className="w-full max-w-md" />
+          </Reveal>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* --------------------------------------------------------------- FAQ */
 
 const FAQ_ITEMS = [
@@ -335,7 +381,7 @@ export function Impact() {
             so that what they see reaches the people who can respond, quickly and reliably.
           </p>
           <p className="mt-5 text-sm text-muted">AfyaLink is an academic prototype. It is not connected to national health information systems.</p>
-          <ConnectedVillages className="mt-10 w-full max-w-md" />
+          <EmptyMap className="mt-10 w-full max-w-md" />
         </Reveal>
         <ul className="grid gap-4">
           {PRINCIPLES.map(({ Icon, title, text }, i) => (
