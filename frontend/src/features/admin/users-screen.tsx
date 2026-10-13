@@ -46,7 +46,7 @@ export function UsersScreen() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 mb-6">
         <StatCard label="Total" value={total} icon={Users} hint="Accounts" />
         <StatCard label="Administrators" value={admins} icon={ShieldCheck} hint="With admin access" />
         <StatCard label="Volunteers" value={chvs} icon={Mail} hint="CHV role" />
