@@ -82,6 +82,7 @@ export interface User {
   isActive: boolean;
   mfaEnabled: boolean;
   lastLoginAt: string | null;
+  avatarUrl: string | null;
 }
 
 export interface Location {

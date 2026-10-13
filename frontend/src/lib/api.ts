@@ -202,6 +202,11 @@ export function apiJson<T>(path: string, method: "POST" | "PATCH" | "PUT" | "DEL
   return api<T>(path, { ...init, method, body: body === undefined ? undefined : JSON.stringify(body) });
 }
 
+/** Shorthand for FormData bodies (file uploads). */
+export function apiForm<T>(path: string, formData: FormData, init: ApiRequestInit = {}): Promise<T> {
+  return api<T>(path, { ...init, method: "POST", body: formData });
+}
+
 export interface DownloadedFile {
   blob: Blob;
   filename: string;

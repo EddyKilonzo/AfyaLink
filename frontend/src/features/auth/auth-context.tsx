@@ -31,6 +31,8 @@ interface AuthContextValue {
   logoutEverywhere: () => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<User>;
   updateProfile: (input: { fullName: string; phone?: string | null }) => Promise<User>;
+  /** Uploads a new profile picture. */
+  updateProfilePicture: (file: File) => Promise<User>;
   refresh: () => Promise<void>;
   hasRole: (...roles: UserRole[]) => boolean;
 }
@@ -152,11 +154,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [signedIn],
   );
 
+  const updateProfilePicture = useCallback(
+    async (file: File) => {
+      const next = await authService.uploadProfilePicture(file);
+      await signedIn(next);
+      return next;
+    },
+    [signedIn],
+  );
+
   const hasRole = useCallback((...roles: UserRole[]) => Boolean(user && roles.includes(user.role)), [user]);
 
   const value = useMemo(
-    () => ({ status, user, offlineSession, sessionExpired, login, logout, logoutEverywhere, changePassword, updateProfile, refresh, hasRole }),
-    [status, user, offlineSession, sessionExpired, login, logout, logoutEverywhere, changePassword, updateProfile, refresh, hasRole],
+    () => ({ status, user, offlineSession, sessionExpired, login, logout, logoutEverywhere, changePassword, updateProfile, updateProfilePicture, refresh, hasRole }),
+    [status, user, offlineSession, sessionExpired, login, logout, logoutEverywhere, changePassword, updateProfile, updateProfilePicture, refresh, hasRole],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

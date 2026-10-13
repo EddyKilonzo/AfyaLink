@@ -1,4 +1,4 @@
-import { api, apiJson, setCsrfToken } from "@/lib/api";
+import { api, apiJson, apiForm, setCsrfToken } from "@/lib/api";
 import type { MfaSetup, User } from "@/types";
 
 export interface LoginInput {
@@ -53,6 +53,15 @@ export const authService = {
       fullName: input.fullName,
       phone: input.phone ?? null,
     });
+    return res.user;
+  },
+
+  /** Uploads a new profile picture to Cloudinary via the backend. */
+  async uploadProfilePicture(file: File): Promise<User> {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    const res = await apiForm<{ user: User; csrfToken: string }>("/auth/profile/picture", formData);
+    setCsrfToken(res.csrfToken);
     return res.user;
   },
 
