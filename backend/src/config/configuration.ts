@@ -17,6 +17,8 @@ export interface AppConfig {
     username: string;
     password: string;
     database: string;
+    /** Database dialect: 'mysql' or 'postgres' */
+    dialect: 'mysql' | 'postgres';
     configured: boolean;
   };
   auth: {
@@ -74,23 +76,33 @@ interface DbParts {
   username: string;
   password: string;
   database: string;
+  dialect: 'mysql' | 'postgres';
 }
 
-/** Parses mysql://user:pass@host:3306/dbname. Returns null when absent or malformed. */
+/** Parses mysql:// or postgresql:// URLs. Returns null when absent or malformed. */
 function parseDatabaseUrl(url: string | undefined): DbParts | null {
   if (!url) return null;
   try {
     const parsed = new URL(url);
-    if (!/^mysql2?:$/.test(parsed.protocol)) throw new Error('unsupported protocol');
+    let dialect: 'mysql' | 'postgres';
+    const defaultPort = parsed.protocol === 'postgresql:' || parsed.protocol === 'postgres:' ? 5432 : 3306;
+    if (/^mysql2?:$/.test(parsed.protocol)) {
+      dialect = 'mysql';
+    } else if (/^postgres(?:ql)?:$/.test(parsed.protocol)) {
+      dialect = 'postgres';
+    } else {
+      throw new Error('unsupported protocol');
+    }
     return {
       host: parsed.hostname,
-      port: int(parsed.port, 3306),
+      port: int(parsed.port, defaultPort),
       username: decodeURIComponent(parsed.username),
       password: decodeURIComponent(parsed.password),
       database: decodeURIComponent(parsed.pathname.replace(/^\//, '')),
+      dialect,
     };
   } catch {
-    logger.warn('DATABASE_URL is set but could not be parsed (expected mysql://user:pass@host:port/db). Falling back to DB_* variables.');
+    logger.warn('DATABASE_URL is set but could not be parsed (expected mysql:// or postgresql://). Falling back to DB_* variables.');
     return null;
   }
 }
@@ -132,12 +144,15 @@ export function loadConfiguration(): AppConfig {
   }
 
   const fromUrl = parseDatabaseUrl(env.DATABASE_URL);
+  const rawDialect = env.DB_DIALECT ?? (fromUrl?.dialect ?? 'mysql');
+  const dialect: 'mysql' | 'postgres' = rawDialect === 'postgres' ? 'postgres' : 'mysql';
   const db: DbParts = fromUrl ?? {
     host: env.DB_HOST ?? '',
-    port: int(env.DB_PORT, 3306),
+    port: int(env.DB_PORT, dialect === 'postgres' ? 5432 : 3306),
     username: env.DB_USER ?? '',
     password: env.DB_PASSWORD ?? '',
     database: env.DB_NAME ?? '',
+    dialect,
   };
 
   const origins = (env.CORS_ORIGINS || env.FRONTEND_ORIGIN || 'http://localhost:3000')

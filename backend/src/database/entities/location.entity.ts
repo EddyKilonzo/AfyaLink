@@ -2,7 +2,7 @@ import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeor
 
 @Entity({ name: 'locations' })
 export class Location {
-  @PrimaryGeneratedColumn({ type: 'int', unsigned: true })
+  @PrimaryGeneratedColumn({ type: 'int' })
   id: number;
 
   @Column({ type: 'varchar', length: 80 })
@@ -17,12 +17,12 @@ export class Location {
   @Column({ type: 'varchar', length: 120, nullable: true })
   village: string | null;
 
-  @Column({ type: 'decimal', precision: 9, scale: 6, nullable: true })
+  @Column({ type: 'numeric', precision: 9, scale: 6, nullable: true })
   latitude: string | null;
 
-  @Column({ type: 'decimal', precision: 9, scale: 6, nullable: true })
+  @Column({ type: 'numeric', precision: 9, scale: 6, nullable: true })
   longitude: string | null;
 
-  @CreateDateColumn({ name: 'created_at', type: 'datetime', precision: 6 })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz', precision: 6 })
   createdAt: Date;
 }

@@ -30,10 +30,10 @@ export type AuditDetails = Record<string, string | number | boolean | null>;
 @Index('idx_audit_action_created', ['action', 'createdAt'])
 @Index('idx_audit_target', ['targetType', 'targetId'])
 export class AuditLog {
-  @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
+  @PrimaryGeneratedColumn({ type: 'bigint' })
   id: string;
 
-  @Column({ name: 'actor_id', type: 'char', length: 36, nullable: true })
+  @Column({ name: 'actor_id', type: 'uuid', nullable: true })
   actorId: string | null;
 
   @Column({ type: 'varchar', length: 48 })
@@ -42,7 +42,7 @@ export class AuditLog {
   @Column({ name: 'target_type', type: 'varchar', length: 24, nullable: true })
   targetType: AuditTargetType | null;
 
-  @Column({ name: 'target_id', type: 'varchar', length: 36, nullable: true })
+  @Column({ name: 'target_id', type: 'uuid', nullable: true })
   targetId: string | null;
 
   @Column({ name: 'ip_address', type: 'varchar', length: 45, nullable: true })
@@ -51,9 +51,9 @@ export class AuditLog {
   @Column({ name: 'request_id', type: 'varchar', length: 64, nullable: true })
   requestId: string | null;
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   details: AuditDetails | null;
 
-  @CreateDateColumn({ name: 'created_at', type: 'datetime', precision: 6 })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz', precision: 6 })
   createdAt: Date;
 }

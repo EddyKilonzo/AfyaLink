@@ -52,17 +52,17 @@ export enum ReportStatus {
 @Index('idx_reports_chv_observed', ['chvId', 'observedAt'])
 @Index('idx_reports_category_observed', ['category', 'observedAt'])
 export class HealthReport {
-  @PrimaryColumn({ type: 'char', length: 36 })
+  @PrimaryColumn({ type: 'uuid' })
   id: string;
 
-  @Column({ name: 'chv_id', type: 'char', length: 36 })
+  @Column({ name: 'chv_id', type: 'uuid' })
   chvId: string;
 
   @ManyToOne(() => User, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'chv_id' })
   chv?: Relation<User>;
 
-  @Column({ name: 'location_id', type: 'int', unsigned: true, nullable: true })
+  @Column({ name: 'location_id', type: 'int', nullable: true })
   locationId: number | null;
 
   @ManyToOne(() => Location, { nullable: true, onDelete: 'SET NULL' })
@@ -78,49 +78,49 @@ export class HealthReport {
   @Column({ type: 'enum', enum: ReportSeverity, default: ReportSeverity.LOW })
   severity: ReportSeverity;
 
-  @Column({ name: 'cases_count', type: 'int', unsigned: true, default: 1 })
+  @Column({ name: 'cases_count', type: 'int', default: 1 })
   casesCount: number;
 
   @Column({ name: 'age_group', type: 'enum', enum: AgeGroup, default: AgeGroup.MIXED })
   ageGroup: AgeGroup;
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   symptoms: string[] | null;
 
   @Column({ type: 'text', nullable: true })
   notes: string | null;
 
-  @Column({ type: 'decimal', precision: 9, scale: 6, nullable: true })
+  @Column({ type: 'numeric', precision: 9, scale: 6, nullable: true })
   latitude: string | null;
 
-  @Column({ type: 'decimal', precision: 9, scale: 6, nullable: true })
+  @Column({ type: 'numeric', precision: 9, scale: 6, nullable: true })
   longitude: string | null;
 
-  @Column({ name: 'observed_at', type: 'datetime', precision: 6 })
+  @Column({ name: 'observed_at', type: 'timestamptz', precision: 6 })
   observedAt: Date;
 
-  @Column({ name: 'client_created_at', type: 'datetime', precision: 6 })
+  @Column({ name: 'client_created_at', type: 'timestamptz', precision: 6 })
   clientCreatedAt: Date;
 
   @Column({ type: 'enum', enum: ReportStatus, default: ReportStatus.SUBMITTED })
   status: ReportStatus;
 
-  @Column({ name: 'reviewed_by', type: 'char', length: 36, nullable: true })
+  @Column({ name: 'reviewed_by', type: 'uuid', nullable: true })
   reviewedById: string | null;
 
   @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'reviewed_by' })
   reviewedBy?: Relation<User> | null;
 
-  @Column({ name: 'reviewed_at', type: 'datetime', precision: 6, nullable: true })
+  @Column({ name: 'reviewed_at', type: 'timestamptz', precision: 6, nullable: true })
   reviewedAt: Date | null;
 
   @Column({ name: 'review_note', type: 'varchar', length: 500, nullable: true })
   reviewNote: string | null;
 
-  @CreateDateColumn({ name: 'received_at', type: 'datetime', precision: 6 })
+  @CreateDateColumn({ name: 'received_at', type: 'timestamptz', precision: 6 })
   receivedAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at', type: 'datetime', precision: 6 })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz', precision: 6 })
   updatedAt: Date;
 }

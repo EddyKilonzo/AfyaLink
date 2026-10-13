@@ -14,9 +14,9 @@ export type DatabaseState = 'not_configured' | 'connecting' | 'connected' | 'una
 const RETRY_INTERVAL_MS = 15_000;
 
 /**
- * Owns the MySQL connection lifecycle. The TypeORM DataSource is created with
+ * Owns the database connection lifecycle. The TypeORM DataSource is created with
  * `manualInitialization`, so the API boots (and /api/health answers) even when
- * MySQL is missing; connection attempts continue in the background and every
+ * the database is missing; connection attempts continue in the background and every
  * database-backed endpoint calls `assertReady()` to return a clean 503 instead.
  */
 @Injectable()
@@ -35,7 +35,7 @@ export class DatabaseService implements OnApplicationBootstrap, OnApplicationShu
     if (!db.configured) {
       this.state = 'not_configured';
       this.logger.warn(
-        'MySQL is not configured (DB_HOST, DB_NAME, DB_USER). Database-backed endpoints will return 503.',
+        'Database is not configured (DB_HOST, DB_NAME, DB_USER). Database-backed endpoints will return 503.',
       );
       return;
     }
@@ -47,7 +47,8 @@ export class DatabaseService implements OnApplicationBootstrap, OnApplicationShu
     try {
       if (this.dataSource.isInitialized) await this.dataSource.destroy();
     } catch (error) {
-      this.logger.warn(`Error while closing MySQL connection (${(error as { code?: string }).code ?? 'UNKNOWN'}).`);
+      const dialect = this.config.get('db.dialect', { infer: true });
+      this.logger.warn(`Error while closing ${dialect} connection (${(error as { code?: string }).code ?? 'UNKNOWN'}).`);
     }
   }
 
@@ -74,12 +75,14 @@ export class DatabaseService implements OnApplicationBootstrap, OnApplicationShu
       this.state = 'connecting';
       await this.dataSource.initialize();
       this.state = 'connected';
-      this.logger.log('Connected to MySQL.');
+      const dialect = this.config.get('db.dialect', { infer: true });
+      this.logger.log(`Connected to ${dialect === 'postgres' ? 'PostgreSQL' : 'MySQL'}.`);
     } catch (error) {
       this.state = 'unavailable';
       // Log only the driver error code; messages can echo connection details.
       const code = (error as { code?: string }).code ?? 'UNKNOWN';
-      this.logger.warn(`MySQL connection failed (${code}). Retrying in ${RETRY_INTERVAL_MS / 1000}s.`);
+      const dialect = this.config.get('db.dialect', { infer: true });
+      this.logger.warn(`${dialect === 'postgres' ? 'PostgreSQL' : 'MySQL'} connection failed (${code}). Retrying in ${RETRY_INTERVAL_MS / 1000}s.`);
       this.retryTimer = setTimeout(() => void this.connect(), RETRY_INTERVAL_MS);
       this.retryTimer.unref();
     }

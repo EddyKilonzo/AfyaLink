@@ -4,15 +4,15 @@ import { Column, CreateDateColumn, Entity, Index, PrimaryColumn } from 'typeorm'
 @Entity({ name: 'revoked_sessions' })
 @Index('idx_revoked_expires', ['expiresAt'])
 export class RevokedSession {
-  @PrimaryColumn({ type: 'char', length: 36 })
+  @PrimaryColumn({ type: 'uuid' })
   jti: string;
 
-  @Column({ name: 'user_id', type: 'char', length: 36 })
+  @Column({ name: 'user_id', type: 'uuid' })
   userId: string;
 
-  @Column({ name: 'expires_at', type: 'datetime', precision: 6 })
+  @Column({ name: 'expires_at', type: 'timestamptz', precision: 6 })
   expiresAt: Date;
 
-  @CreateDateColumn({ name: 'revoked_at', type: 'datetime', precision: 6 })
+  @CreateDateColumn({ name: 'revoked_at', type: 'timestamptz', precision: 6 })
   revokedAt: Date;
 }

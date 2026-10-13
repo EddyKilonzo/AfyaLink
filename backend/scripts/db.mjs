@@ -2,12 +2,13 @@
 /**
  * Minimal SQL migration/seed runner for AfyaLink.
  *
- *   node scripts/db.mjs migrate   create the database (if allowed) and apply backend/database/migrations/*.sql
+ *   node scripts/db.mjs migrate   apply backend/database/migrations/*.sql
  *   node scripts/db.mjs seed      apply backend/database/seeds/*.sql (synthetic data, dev only)
  *   node scripts/db.mjs status    list applied migrations
  *
  * Applied files are recorded in `schema_migrations`, so each runs once.
  * Reads DB_* settings from backend/.env or the root .env.
+ * Supports both MySQL and PostgreSQL (via DB_DIALECT).
  */
 import { readdir, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -15,7 +16,11 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { parseEnv } from 'node:util';
+import pg from 'pg';
 import mysql from 'mysql2/promise';
+
+const { Pool: PgPool } = pg;
+const { Pool: MySqlPool } = mysql;
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const backendDir = path.resolve(here, '..');
@@ -37,28 +42,35 @@ async function loadEnv() {
 }
 
 function dbSettings() {
+  const dialect = (process.env.DB_DIALECT ?? 'mysql').toLowerCase();
+  
   if (process.env.DATABASE_URL) {
     try {
       const url = new URL(process.env.DATABASE_URL);
       process.env.DB_HOST = url.hostname;
-      process.env.DB_PORT = url.port || '3306';
+      process.env.DB_PORT = url.port || (dialect === 'postgres' ? '5432' : '3306');
       process.env.DB_USER = decodeURIComponent(url.username);
       process.env.DB_PASSWORD = decodeURIComponent(url.password);
       process.env.DB_NAME = decodeURIComponent(url.pathname.replace(/^\//, ''));
+      process.env.DB_DIALECT = dialect;
     } catch {
-      throw new Error('DATABASE_URL is not a valid mysql://user:pass@host:port/db URL.');
+      throw new Error(`DATABASE_URL is not a valid ${dialect === 'postgres' ? 'postgresql://' : 'mysql://'} URL.`);
     }
   }
-  const { DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME } = process.env;
+  
+  const { DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, DB_DIALECT: envDialect } = process.env;
+  const finalDialect = (envDialect ?? dialect).toLowerCase();
+  
   if (!DB_HOST || !DB_USER || !DB_NAME) {
     throw new Error('DB_HOST, DB_USER and DB_NAME must be set (see .env.example).');
   }
-  if (!/^[A-Za-z0-9_]+$/.test(DB_NAME)) {
-    throw new Error('DB_NAME may only contain letters, digits and underscores.');
-  }
+  
+  const defaultPort = finalDialect === 'postgres' ? 5432 : 3306;
+  
   return {
+    dialect: finalDialect,
     host: DB_HOST,
-    port: Number(DB_PORT ?? 3306),
+    port: Number(DB_PORT ?? defaultPort),
     user: DB_USER,
     password: DB_PASSWORD ?? '',
     database: DB_NAME,
@@ -75,34 +87,64 @@ async function sqlFiles(folder) {
   }
 }
 
-async function connect(settings) {
-  // Connect without a default schema first so the database can be created.
-  const server = await mysql.createConnection({ ...settings, database: undefined, multipleStatements: true });
-  try {
-    await server.query(
-      `CREATE DATABASE IF NOT EXISTS \`${settings.database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
-    );
-  } catch (error) {
-    // The account may lack CREATE privileges; that is fine if the DB already exists.
-    if (error.code !== 'ER_DBACCESS_DENIED_ERROR' && error.code !== 'ER_ACCESS_DENIED_ERROR') throw error;
-  } finally {
-    await server.end();
+async function createPool(settings) {
+  if (settings.dialect === 'postgres') {
+    return new PgPool({
+      host: settings.host,
+      port: settings.port,
+      user: settings.user,
+      password: settings.password,
+      database: settings.database,
+      ssl: { rejectUnauthorized: false },
+      max: 1,
+    });
+  } else {
+    return new MySqlPool({
+      host: settings.host,
+      port: settings.port,
+      user: settings.user,
+      password: settings.password,
+      database: settings.database,
+      waitForConnections: true,
+      connectionLimit: 1,
+      queueLimit: 0,
+      multipleStatements: true,
+    });
   }
-  return mysql.createConnection({ ...settings, multipleStatements: true });
 }
 
-async function ensureLedger(conn) {
-  await conn.query(`CREATE TABLE IF NOT EXISTS schema_migrations (
-    name VARCHAR(255) NOT NULL PRIMARY KEY,
-    kind ENUM('migration','seed') NOT NULL,
-    applied_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
-  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+async function ensureLedger(pool, dialect) {
+  if (dialect === 'postgres') {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS schema_migrations (
+        name VARCHAR(255) NOT NULL PRIMARY KEY,
+        kind VARCHAR(20) NOT NULL CHECK (kind IN ('migration','seed')),
+        applied_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW()
+      )
+    `);
+  } else {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS schema_migrations (
+        name VARCHAR(255) NOT NULL PRIMARY KEY,
+        kind ENUM('migration','seed') NOT NULL,
+        applied_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+  }
 }
 
-async function apply(conn, kind) {
+async function apply(pool, dialect, kind) {
   const folder = kind === 'migration' ? 'migrations' : 'seeds';
-  const [rows] = await conn.query('SELECT name FROM schema_migrations WHERE kind = ?', [kind]);
-  const applied = new Set(rows.map((r) => r.name));
+  let applied;
+  
+  if (dialect === 'postgres') {
+    const { rows } = await pool.query('SELECT name FROM schema_migrations WHERE kind = $1', [kind]);
+    applied = new Set(rows.map((r) => r.name));
+  } else {
+    const [rows] = await pool.query('SELECT name FROM schema_migrations WHERE kind = ?', [kind]);
+    applied = new Set(rows.map((r) => r.name));
+  }
+  
   const files = await sqlFiles(folder);
   let count = 0;
 
@@ -110,12 +152,17 @@ async function apply(conn, kind) {
     if (applied.has(file)) continue;
     const sql = await readFile(path.join(databaseDir, folder, file), 'utf8');
     try {
-      await conn.query(sql);
-      await conn.query('INSERT INTO schema_migrations (name, kind) VALUES (?, ?)', [file, kind]);
+      await pool.query(sql);
+      if (dialect === 'postgres') {
+        await pool.query('INSERT INTO schema_migrations (name, kind) VALUES ($1, $2)', [file, kind]);
+      } else {
+        await pool.query('INSERT INTO schema_migrations (name, kind) VALUES (?, ?)', [file, kind]);
+      }
       console.log(`  applied ${folder}/${file}`);
       count += 1;
     } catch (error) {
-      throw new Error(`Failed applying ${folder}/${file}: [${error.code ?? 'ERROR'}] ${error.sqlMessage ?? error.message}`);
+      const message = error.message ?? error.sqlMessage ?? String(error);
+      throw new Error(`Failed applying ${folder}/${file}: ${message}`);
     }
   }
   console.log(count === 0 ? `  ${folder}: nothing to apply` : `  ${folder}: ${count} file(s) applied`);
@@ -129,31 +176,40 @@ async function main() {
 
   await loadEnv();
   const settings = dbSettings();
+  
   if (command === 'seed' && process.env.NODE_ENV === 'production') {
     throw new Error('Refusing to load synthetic seed data with NODE_ENV=production.');
   }
 
-  let conn;
+  const pool = await createPool(settings);
+  
   try {
-    conn = await connect(settings);
-    await ensureLedger(conn);
-    console.log(`Database ${settings.database} @ ${settings.host}:${settings.port}`);
+    console.log(`${settings.dialect.toUpperCase()} ${settings.database} @ ${settings.host}:${settings.port}`);
+    await ensureLedger(pool, settings.dialect);
+    
     if (command === 'status') {
-      const [rows] = await conn.query('SELECT name, kind, applied_at FROM schema_migrations ORDER BY applied_at');
+      let rows;
+      if (settings.dialect === 'postgres') {
+        const { rows: r } = await pool.query('SELECT name, kind, applied_at FROM schema_migrations ORDER BY applied_at');
+        rows = r;
+      } else {
+        const [r] = await pool.query('SELECT name, kind, applied_at FROM schema_migrations ORDER BY applied_at');
+        rows = r;
+      }
       console.table(rows);
     } else {
-      await apply(conn, command === 'migrate' ? 'migration' : 'seed');
+      await apply(pool, settings.dialect, command === 'migrate' ? 'migration' : 'seed');
     }
   } finally {
-    if (conn) await conn.end().catch(() => undefined);
+    await pool.end().catch(() => undefined);
   }
 }
 
 main().catch((error) => {
   const hint =
     error.code === 'ECONNREFUSED'
-      ? ' (is MySQL running and DB_HOST/DB_PORT correct?)'
-      : error.code === 'ER_ACCESS_DENIED_ERROR'
+      ? ` (is ${settings?.dialect ?? 'database'} running and DB_HOST/DB_PORT correct?)`
+      : error.code === '28P01' || error.code === 'ER_ACCESS_DENIED_ERROR'
         ? ' (check DB_USER/DB_PASSWORD)'
         : '';
   console.error(`db: ${error.message}${hint}`);

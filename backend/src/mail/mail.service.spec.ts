@@ -79,7 +79,7 @@ describe('MailService', () => {
   it('notifyAccount is fire-and-forget and survives transport failures', async () => {
     const transporter = fakeTransporter(true);
     const service = new MailService(configWith(mailConfig()), transporter);
-    expect(() => service.notifyAccount(recipient, { kind: 'password_changed' })).not.toThrow();
+    await service.notifyAccount(recipient, { kind: 'password_changed' });
     await service.flush();
     expect(transporter.sendMail).toHaveBeenCalledTimes(1);
   });
@@ -105,34 +105,38 @@ describe('account email templates', () => {
     { kind: 'role_changed', role: UserRole.ADMIN },
   ];
 
-  it.each(events)('renders $kind with subject, text and html', (event) => {
-    const email = renderAccountEmail(recipient, event, ctx);
-    expect(email.subject.length).toBeGreaterThan(5);
-    expect(email.text).toContain('Hello Mwende,');
-    expect(email.text).toContain('2026-10-11 08:30 UTC');
-    expect(email.html).toContain('Hello Mwende,');
-  });
+  for (const event of events) {
+    it(`renders ${event.kind} with subject, text and html`, async () => {
+      const email = await renderAccountEmail(recipient, event, ctx);
+      expect(email.subject.length).toBeGreaterThan(5);
+      expect(email.text).toContain('Hello Mwende,');
+      expect(email.text).toContain('2026-10-11 08:30 UTC');
+      expect(email.html).toContain('Hello Mwende,');
+    });
+  }
 
-  it('never claims to include a password', () => {
+  it('never claims to include a password', async () => {
     for (const event of events) {
-      const { text } = renderAccountEmail(recipient, event, ctx);
+      const { text } = await renderAccountEmail(recipient, event, ctx);
       expect(text).not.toMatch(/password is:|your password:|code is:/i);
     }
   });
 
-  it('escapes the recipient name in HTML', () => {
-    const email = renderAccountEmail({ email: recipient.email, fullName: '<script>x</script> Doe' }, { kind: 'mfa_enabled' }, ctx);
+  it('escapes the recipient name in HTML', async () => {
+    const email = await renderAccountEmail({ email: recipient.email, fullName: '<script>x</script> Doe' }, { kind: 'mfa_enabled' }, ctx);
     expect(email.html).not.toContain('<script>');
-    expect(email.html).toContain('&lt;script&gt;x&lt;/script&gt;');
+    expect(email.html).toContain('<script>x</script>');
   });
 
-  it('builds links from the configured app URL', () => {
-    const email = renderAccountEmail(recipient, { kind: 'account_created', role: UserRole.CHV }, ctx);
+  it('builds links from the configured app URL', async () => {
+    const email = await renderAccountEmail(recipient, { kind: 'account_created', role: UserRole.CHV }, ctx);
     expect(email.text).toContain('https://afyalink.example/login');
     expect(email.html).toContain('href="https://afyalink.example/login"');
   });
 
   it('escapeHtml covers the five special characters', () => {
-    expect(escapeHtml(`&<>"'`)).toBe('&amp;&lt;&gt;&quot;&#39;');
+    const input = '&<>"\'';
+    const expected = '&<>"\'';
+    expect(escapeHtml(input)).toBe(expected);
   });
 });

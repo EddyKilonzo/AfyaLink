@@ -1,0 +1,70 @@
+<%- include('base.ejs', {
+  subject: 'Welcome to AfyaLink',
+  title: 'Welcome to AfyaLink, ' + fullName + '!',
+  body: `
+    <p style="margin: 0 0 20px; color: #172522;">Your account has been created successfully. You can now start recording community health reports, even when offline.</p>
+    
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 24px 0;">
+      <tr>
+        <td style="background: linear-gradient(135deg, #eef9f3 0%, #ddf5ea 100%); border-radius: 12px; padding: 20px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td style="width: 48px;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: #146C5A; display: flex; align-items: center; justify-content: center;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                  </svg>
+                </div>
+              </td>
+              <td style="padding-left: 16px;">
+                <p style="margin: 0 0 4px; color: #146C5A; font-size: 14px; font-weight: 600;">Your Role: <span style="text-transform: capitalize;">` + role.toLowerCase() + `</span></p>
+                <p style="margin: 0; color: #687873; font-size: 13px;">` + (role === 'CHV' ? 'Record and submit health reports from your area' : 'Review reports, view analytics, and manage your team') + `</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+    
+    <p style="margin: 0 0 24px; color: #172522;">Here are a few things to get you started:</p>
+    
+    <ul style="margin: 0 0 24px; padding-left: 20px; color: #172522; line-height: 1.8;">
+      <li><strong>Record reports offline</strong> - Reports save instantly on your device, with or without signal</li>
+      <li><strong>Auto-sync</strong> - When connectivity returns, reports upload automatically and are confirmed by the server</li>
+      <li><strong>Your map</strong> - See where cases cluster in your area with interactive maps</li>
+      <li><strong>Review queue</strong> - Admins review every report and record actions taken</li>
+    </ul>
+    
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 32px 0;">
+      <tr>
+        <td align="center">
+          <a href="` + appUrl + `/login" style="display: inline-block; background: linear-gradient(135deg, #146C5A 0%, #1D8A70 100%); color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-size: 15px; font-weight: 600; box-shadow: 0 2px 4px rgb(20 108 90 / 0.2), 0 8px 16px -4px rgb(20 108 90 / 0.15);">Sign In to AfyaLink</a>
+        </td>
+      </tr>
+    </table>
+    
+    <p style="margin: 24px 0 0; color: #687873; font-size: 13px;">If the button doesn&apos;t work, copy and paste this link into your browser:<br><a href="` + appUrl + `/login" style="color: #146C5A; word-break: break-all;">` + appUrl + `/login</a></p>
+    
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top: 24px;">
+      <tr>
+        <td style="padding: 16px; background-color: #fdf1df; border-radius: 8px; border-left: 4px solid #F3B66A;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td style="width: 24px; vertical-align: top;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#85560F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="16" x2="12" y2="12"/>
+                  <line x1="12" y1="8" x2="12.01" y2="8"/>
+                </svg>
+              </td>
+              <td style="padding-left: 12px; color: #85560F; font-size: 13px; line-height: 1.5;">
+                <strong>Important:</strong> Never share your login credentials. AfyaLink will never ask for your password via email.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  `
+}) -%>

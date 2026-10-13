@@ -19,8 +19,9 @@ export const ENTITIES = [User, Location, HealthReport, SyncLog, AuditLog, Revoke
       inject: [ConfigService],
       useFactory: (config: ConfigService<AppConfig, true>) => {
         const db = config.get('db', { infer: true });
+        const isPostgres = db.dialect === 'postgres';
         return {
-          type: 'mysql' as const,
+          type: isPostgres ? 'postgres' : 'mysql',
           host: db.host,
           port: db.port,
           username: db.username,
@@ -32,7 +33,9 @@ export const ENTITIES = [User, Location, HealthReport, SyncLog, AuditLog, Revoke
           // Query logging is off so health data never reaches the logs.
           logging: false,
           timezone: 'Z',
-          charset: 'utf8mb4',
+          ...(isPostgres
+            ? { ssl: { rejectUnauthorized: false } }
+            : { charset: 'utf8mb4' }),
           manualInitialization: true,
         };
       },

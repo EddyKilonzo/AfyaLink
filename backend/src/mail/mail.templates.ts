@@ -1,4 +1,11 @@
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { renderFile } from 'ejs';
 import { UserRole } from '../database/entities/user.entity.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const TEMPLATES_DIR = path.join(__dirname, 'templates');
 
 /**
  * Account and security notifications. Templates deliberately never contain
@@ -34,6 +41,13 @@ export interface TemplateContext {
   appUrl: string;
   /** When the event happened; shown in UTC so it reads the same everywhere. */
   at: Date;
+  /** For password reset emails */
+  resetUrl?: string;
+  /** For notifications */
+  title?: string;
+  message?: string;
+  actionUrl?: string;
+  actionLabel?: string;
 }
 
 const ROLE_NAMES: Record<UserRole, string> = {
@@ -43,111 +57,6 @@ const ROLE_NAMES: Record<UserRole, string> = {
 
 const NOT_YOU = 'If you did not expect this, contact your AfyaLink administrator straight away.';
 
-interface Content {
-  subject: string;
-  lines: string[];
-  action?: { label: string; path: string };
-  /** Security events get the "not you?" warning. */
-  security: boolean;
-}
-
-function content(event: AccountEmail): Content {
-  switch (event.kind) {
-    case 'account_created':
-      return {
-        subject: 'Your AfyaLink account is ready',
-        lines: [
-          `An administrator created an AfyaLink account for you as a ${ROLE_NAMES[event.role]}.`,
-          'Your administrator will give you your first password in person or by phone. It is never sent by email.',
-          'After signing in, change it under Settings.',
-        ],
-        action: { label: 'Sign in to AfyaLink', path: '/login' },
-        security: false,
-      };
-    case 'password_changed':
-      return {
-        subject: 'Your AfyaLink password was changed',
-        lines: ['The password for your AfyaLink account was just changed. Your other devices have been signed out.'],
-        security: true,
-      };
-    case 'password_reset_by_admin':
-      return {
-        subject: 'Your AfyaLink password was reset',
-        lines: [
-          'An administrator reset the password for your AfyaLink account and you have been signed out on every device.',
-          'Your administrator will give you the new password directly. It is never sent by email.',
-        ],
-        action: { label: 'Sign in to AfyaLink', path: '/login' },
-        security: true,
-      };
-    case 'mfa_enabled':
-      return {
-        subject: 'Two-factor sign-in is on',
-        lines: ['Two-factor sign-in was turned on for your AfyaLink account. You will need a code from your authenticator app each time you sign in.'],
-        security: true,
-      };
-    case 'mfa_disabled':
-      return {
-        subject: 'Two-factor sign-in is off',
-        lines: ['Two-factor sign-in was turned off for your AfyaLink account.'],
-        action: { label: 'Review your settings', path: '/settings' },
-        security: true,
-      };
-    case 'mfa_reset_by_admin':
-      return {
-        subject: 'Two-factor sign-in was reset',
-        lines: [
-          'An administrator turned off two-factor sign-in for your AfyaLink account and signed you out on every device.',
-          'We recommend turning it back on with your new device under Settings.',
-        ],
-        action: { label: 'Open settings', path: '/settings' },
-        security: true,
-      };
-    case 'signed_out_everywhere':
-      return {
-        subject: 'You were signed out on all devices',
-        lines: ['Every session of your AfyaLink account was ended, on every device.'],
-        security: true,
-      };
-    case 'account_deactivated':
-      return {
-        subject: 'Your AfyaLink account was deactivated',
-        lines: [
-          'An administrator deactivated your AfyaLink account. You can no longer sign in.',
-          'Reports that had not synced stay on your device. Ask your administrator if you need access again.',
-        ],
-        security: false,
-      };
-    case 'account_reactivated':
-      return {
-        subject: 'Your AfyaLink account was reactivated',
-        lines: ['An administrator reactivated your AfyaLink account. You can sign in again.'],
-        action: { label: 'Sign in to AfyaLink', path: '/login' },
-        security: false,
-      };
-    case 'role_changed':
-      return {
-        subject: 'Your AfyaLink role changed',
-        lines: [
-          `An administrator changed your AfyaLink role to ${ROLE_NAMES[event.role]}.`,
-          'You have been signed out; sign in again to continue.',
-        ],
-        action: { label: 'Sign in to AfyaLink', path: '/login' },
-        security: true,
-      };
-  }
-}
-
-export function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-/** First name for the greeting; control characters removed, length capped. */
 function greetingName(fullName: string): string {
   // eslint-disable-next-line no-control-regex
   const first = fullName.replace(/[\u0000-\u001f\u007f]/g, '').trim().split(/\s+/)[0] ?? '';
@@ -158,43 +67,281 @@ function formatUtc(at: Date): string {
   return `${at.toISOString().slice(0, 16).replace('T', ' ')} UTC`;
 }
 
-export function renderAccountEmail(recipient: EmailRecipient, event: AccountEmail, ctx: TemplateContext): RenderedEmail {
-  const c = content(event);
+function renderTemplate(templateName: string, data: Record<string, unknown>): Promise<string> {
+  const templatePath = path.join(TEMPLATES_DIR, `${templateName}.ejs`);
+  return renderFile(templatePath, data, { async: true });
+}
+
+export async function renderAccountEmail(recipient: EmailRecipient, event: AccountEmail, ctx: TemplateContext): Promise<{ subject: string; text: string; html: string }> {
   const name = greetingName(recipient.fullName);
   const when = `Time: ${formatUtc(ctx.at)}`;
-  const link = c.action ? `${ctx.appUrl}${c.action.path}` : null;
-  const footer = 'This is an automatic message from AfyaLink. Please do not reply.';
 
-  const text = [
-    `Hello ${name},`,
-    '',
-    ...c.lines,
-    '',
-    when,
-    ...(link && c.action ? ['', `${c.action.label}: ${link}`] : []),
-    ...(c.security ? ['', NOT_YOU] : []),
-    '',
-    '—',
-    footer,
-  ].join('\n');
+  switch (event.kind) {
+    case 'account_created': {
+      const subject = 'Welcome to AfyaLink';
+      const html = await renderTemplate('welcome', {
+        subject,
+        fullName: recipient.fullName,
+        role: event.role,
+        appUrl: ctx.appUrl,
+      });
+      const text = [
+        `Hello ${name},`,
+        '',
+        `An administrator created an AfyaLink account for you as a ${ROLE_NAMES[event.role]}.`,
+        'Your administrator will give you your first password in person or by phone. It is never sent by email.',
+        'After signing in, change it under Settings.',
+        '',
+        when,
+        '',
+        `Sign in to AfyaLink: ${ctx.appUrl}/login`,
+        '',
+        '—',
+        'This is an automatic message from AfyaLink. Please do not reply.',
+      ].join('\n');
+      return { subject, text, html };
+    }
 
-  const p = (s: string) => `<p style="margin:0 0 12px">${escapeHtml(s)}</p>`;
-  const html = [
-    '<!doctype html><html lang="en"><body style="margin:0;background:#f6f5f1;font-family:Arial,Helvetica,sans-serif;color:#13221f">',
-    '<div style="max-width:520px;margin:0 auto;padding:24px">',
-    '<p style="margin:0 0 16px;font-weight:bold;color:#0e6a59;font-size:18px">AfyaLink</p>',
-    '<div style="background:#ffffff;border:1px solid #e3e1d9;border-radius:12px;padding:20px">',
-    p(`Hello ${name},`),
-    ...c.lines.map(p),
-    `<p style="margin:0 0 12px;color:#5b6b67;font-size:13px">${escapeHtml(when)}</p>`,
-    link && c.action
-      ? `<p style="margin:16px 0"><a href="${escapeHtml(link)}" style="display:inline-block;background:#0e6a59;color:#ffffff;text-decoration:none;padding:10px 16px;border-radius:8px;font-weight:bold">${escapeHtml(c.action.label)}</a></p>`
-      : '',
-    c.security ? `<p style="margin:12px 0 0;color:#b91c1c;font-size:13px">${escapeHtml(NOT_YOU)}</p>` : '',
-    '</div>',
-    `<p style="margin:16px 0 0;color:#5b6b67;font-size:12px">${escapeHtml(footer)}</p>`,
-    '</div></body></html>',
-  ].join('');
+    case 'password_changed': {
+      const subject = 'Your AfyaLink password was changed';
+      const html = await renderTemplate('notification', {
+        subject,
+        fullName: recipient.fullName,
+        title: 'Password Changed',
+        message: 'The password for your AfyaLink account was just changed. Your other devices have been signed out.',
+        appUrl: ctx.appUrl,
+        actionUrl: undefined,
+        actionLabel: undefined,
+      });
+      const text = [
+        `Hello ${name},`,
+        '',
+        'The password for your AfyaLink account was just changed. Your other devices have been signed out.',
+        '',
+        when,
+        '',
+        NOT_YOU,
+        '',
+        '—',
+        'This is an automatic message from AfyaLink. Please do not reply.',
+      ].join('\n');
+      return { subject, text, html };
+    }
 
-  return { subject: c.subject, text, html };
+    case 'password_reset_by_admin': {
+      const subject = 'Your AfyaLink password was reset';
+      const html = await renderTemplate('password-reset', {
+        subject,
+        fullName: recipient.fullName,
+        appUrl: ctx.appUrl,
+        resetUrl: ctx.resetUrl || `${ctx.appUrl}/login`,
+      });
+      const text = [
+        `Hello ${name},`,
+        '',
+        'An administrator reset the password for your AfyaLink account and you have been signed out on every device.',
+        'Your administrator will give you the new password directly. It is never sent by email.',
+        '',
+        when,
+        '',
+        `Sign in to AfyaLink: ${ctx.appUrl}/login`,
+        '',
+        NOT_YOU,
+        '',
+        '—',
+        'This is an automatic message from AfyaLink. Please do not reply.',
+      ].join('\n');
+      return { subject, text, html };
+    }
+
+    case 'mfa_enabled': {
+      const subject = 'Two-factor authentication enabled';
+      const html = await renderTemplate('mfa-change', {
+        subject,
+        fullName: recipient.fullName,
+        enabled: true,
+        appUrl: ctx.appUrl,
+      });
+      const text = [
+        `Hello ${name},`,
+        '',
+        'Two-factor authentication (2FA) has been successfully enabled on your AfyaLink account.',
+        'You will need a code from your authenticator app each time you sign in.',
+        '',
+        when,
+        '',
+        NOT_YOU,
+        '',
+        '—',
+        'This is an automatic message from AfyaLink. Please do not reply.',
+      ].join('\n');
+      return { subject, text, html };
+    }
+
+    case 'mfa_disabled': {
+      const subject = 'Two-factor authentication disabled';
+      const html = await renderTemplate('mfa-change', {
+        subject,
+        fullName: recipient.fullName,
+        enabled: false,
+        appUrl: ctx.appUrl,
+      });
+      const text = [
+        `Hello ${name},`,
+        '',
+        'Two-factor authentication (2FA) has been disabled on your AfyaLink account.',
+        'Your account now uses password-only authentication.',
+        '',
+        when,
+        '',
+        NOT_YOU,
+        '',
+        '—',
+        'This is an automatic message from AfyaLink. Please do not reply.',
+      ].join('\n');
+      return { subject, text, html };
+    }
+
+    case 'mfa_reset_by_admin': {
+      const subject = 'Two-factor authentication was reset';
+      const html = await renderTemplate('mfa-change', {
+        subject,
+        fullName: recipient.fullName,
+        enabled: false,
+        appUrl: ctx.appUrl,
+      });
+      const text = [
+        `Hello ${name},`,
+        '',
+        'An administrator turned off two-factor authentication for your AfyaLink account and signed you out on every device.',
+        'We recommend turning it back on with your new device under Settings.',
+        '',
+        when,
+        '',
+        `Open settings: ${ctx.appUrl}/settings`,
+        '',
+        NOT_YOU,
+        '',
+        '—',
+        'This is an automatic message from AfyaLink. Please do not reply.',
+      ].join('\n');
+      return { subject, text, html };
+    }
+
+    case 'signed_out_everywhere': {
+      const subject = 'You were signed out on all devices';
+      const html = await renderTemplate('notification', {
+        subject,
+        fullName: recipient.fullName,
+        title: 'Signed Out Everywhere',
+        message: 'Every session of your AfyaLink account was ended, on every device.',
+        appUrl: ctx.appUrl,
+        actionUrl: undefined,
+        actionLabel: undefined,
+      });
+      const text = [
+        `Hello ${name},`,
+        '',
+        'Every session of your AfyaLink account was ended, on every device.',
+        '',
+        when,
+        '',
+        NOT_YOU,
+        '',
+        '—',
+        'This is an automatic message from AfyaLink. Please do not reply.',
+      ].join('\n');
+      return { subject, text, html };
+    }
+
+    case 'account_deactivated': {
+      const subject = 'Your AfyaLink account was deactivated';
+      const html = await renderTemplate('notification', {
+        subject,
+        fullName: recipient.fullName,
+        title: 'Account Deactivated',
+        message: 'An administrator deactivated your AfyaLink account. You can no longer sign in. Reports that had not synced stay on your device. Ask your administrator if you need access again.',
+        appUrl: ctx.appUrl,
+        actionUrl: undefined,
+        actionLabel: undefined,
+      });
+      const text = [
+        `Hello ${name},`,
+        '',
+        'An administrator deactivated your AfyaLink account. You can no longer sign in.',
+        'Reports that had not synced stay on your device. Ask your administrator if you need access again.',
+        '',
+        when,
+        '',
+        '—',
+        'This is an automatic message from AfyaLink. Please do not reply.',
+      ].join('\n');
+      return { subject, text, html };
+    }
+
+    case 'account_reactivated': {
+      const subject = 'Your AfyaLink account was reactivated';
+      const html = await renderTemplate('notification', {
+        subject,
+        fullName: recipient.fullName,
+        title: 'Account Reactivated',
+        message: 'An administrator reactivated your AfyaLink account. You can sign in again.',
+        appUrl: ctx.appUrl,
+        actionUrl: `${ctx.appUrl}/login`,
+        actionLabel: 'Sign In to AfyaLink',
+      });
+      const text = [
+        `Hello ${name},`,
+        '',
+        'An administrator reactivated your AfyaLink account. You can sign in again.',
+        '',
+        when,
+        '',
+        `Sign in to AfyaLink: ${ctx.appUrl}/login`,
+        '',
+        '—',
+        'This is an automatic message from AfyaLink. Please do not reply.',
+      ].join('\n');
+      return { subject, text, html };
+    }
+
+    case 'role_changed': {
+      const subject = 'Your AfyaLink role changed';
+      const html = await renderTemplate('notification', {
+        subject,
+        fullName: recipient.fullName,
+        title: 'Role Changed',
+        message: `An administrator changed your AfyaLink role to ${ROLE_NAMES[event.role]}. You have been signed out; sign in again to continue.`,
+        appUrl: ctx.appUrl,
+        actionUrl: `${ctx.appUrl}/login`,
+        actionLabel: 'Sign In to AfyaLink',
+      });
+      const text = [
+        `Hello ${name},`,
+        '',
+        `An administrator changed your AfyaLink role to ${ROLE_NAMES[event.role]}.`,
+        'You have been signed out; sign in again to continue.',
+        '',
+        when,
+        '',
+        `Sign in to AfyaLink: ${ctx.appUrl}/login`,
+        '',
+        NOT_YOU,
+        '',
+        '—',
+        'This is an automatic message from AfyaLink. Please do not reply.',
+      ].join('\n');
+      return { subject, text, html };
+    }
+  }
+}
+
+export function escapeHtml(value: string): string {
+  const apos = "\u0027";
+  return value
+    .replace(/&/g, '&')
+    .replace(/</g, '<')
+    .replace(/>/g, '>')
+    .replace(/"/g, '"')
+    .replace(/'/g, apos);
 }
