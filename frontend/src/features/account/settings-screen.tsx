@@ -32,14 +32,14 @@ export function SettingsScreen() {
           <div className="min-w-0 flex-1">
             <p className="text-h3 text-ink">{user.fullName}</p>
             <p className="truncate text-sm text-muted">{user.email}</p>
-            <div className="mt-2 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
               <Badge tone="brand">{ROLE_LABELS[user.role]}</Badge>
               <Badge tone={user.mfaEnabled ? "success" : "neutral"} icon={user.mfaEnabled ? <ShieldCheck aria-hidden /> : <ShieldOff aria-hidden />}>
                 Two-factor {user.mfaEnabled ? "on" : "off"}
               </Badge>
             </div>
           </div>
-          <p className="text-xs text-muted sm:text-right">
+          <p className="mt-4 text-xs text-muted sm:text-right sm:mt-0">
             Last sign-in
             <br />
             <span className="font-medium text-ink">{formatDateTime(user.lastLoginAt)}</span>
