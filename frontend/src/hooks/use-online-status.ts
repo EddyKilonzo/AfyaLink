@@ -33,9 +33,10 @@ interface UseOnlineStatusOptions {
  * Enhanced with actual server reachability check for more accurate online status.
  */
 export function useOnlineStatus(options?: UseOnlineStatusOptions): boolean {
-  const [serverOnline, setServerOnline] = useState(true);
-  const checkRef = useRef<NodeJS.Timeout | null>(null);
+  const [serverOnline, setServerOnline] = useState<true | false | null>(null); // null = not checked yet
+  const checkRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isCheckingRef = useRef(false);
+  const consecutiveFailuresRef = useRef(0);
 
   // Use browser's navigator.onLine as base
   const browserOnline = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
@@ -66,9 +67,21 @@ export function useOnlineStatus(options?: UseOnlineStatusOptions): boolean {
         });
         
         clearTimeout(timeoutId);
-        setServerOnline(() => response.ok);
+        if (response.ok) {
+          setServerOnline(true);
+          consecutiveFailuresRef.current = 0;
+        } else {
+          consecutiveFailuresRef.current += 1;
+          // Only mark offline after 2 consecutive failures to avoid flapping
+          if (consecutiveFailuresRef.current >= 2) {
+            setServerOnline(false);
+          }
+        }
       } catch {
-        setServerOnline(() => false);
+        consecutiveFailuresRef.current += 1;
+        if (consecutiveFailuresRef.current >= 2) {
+          setServerOnline(false);
+        }
       } finally {
         isCheckingRef.current = false;
       }
@@ -92,8 +105,11 @@ export function useOnlineStatus(options?: UseOnlineStatusOptions): boolean {
   }, [browserOnline, memoizedOptions]);
 
   // If browser says offline, we're definitely offline
-  // If browser says online but server check fails, we're offline
-  return browserOnline && serverOnline;
+  // If browser says online but server check hasn't run yet, assume online
+  // If browser says online but server check fails (after 2 failures), we're offline
+  if (!browserOnline) return false;
+  if (serverOnline === null) return true; // Not checked yet, assume online
+  return serverOnline;
 }
 
 /**
