@@ -1,6 +1,6 @@
 import { Hero } from "@/features/landing/hero";
 import { OfflineDemo } from "@/features/landing/offline-demo";
-import { FAQ, Features, FinalCta, HowItWorks, Impact, Showcase, SyncDemo } from "@/features/landing/sections";
+import { About, FAQ, Features, FinalCta, HowItWorks, Impact, Showcase, SyncDemo } from "@/features/landing/sections";
 
 export default function Page() {
   return (
@@ -12,6 +12,7 @@ export default function Page() {
       <OfflineDemo />
       <Showcase />
       <Impact />
+      <About />
       <FAQ />
       <FinalCta />
     </main>

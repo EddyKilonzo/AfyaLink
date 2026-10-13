@@ -77,16 +77,35 @@ export function describedBy(name: string, error?: string, hint?: ReactNode): str
   return undefined;
 }
 
-export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input({ className, ...props }, ref) {
-  return <input ref={ref} {...props} className={cx(CONTROL, "mt-1.5 min-h-12 py-2.5", className)} />;
-});
+export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { icon?: ReactNode }>(
+  function Input({ className, icon, ...props }, ref) {
+    return (
+      <div className="relative">
+        {icon && <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" aria-hidden>{icon}</span>}
+        <input
+          ref={ref}
+          {...props}
+          className={cx(CONTROL, "mt-1.5 min-h-12 py-2.5", icon ? "pl-11" : undefined, className)}
+        />
+      </div>
+    );
+  }
+);
 
-export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(function Textarea(
-  { className, ...props },
-  ref,
-) {
-  return <textarea ref={ref} {...props} className={cx(CONTROL, "mt-1.5 min-h-24 resize-y py-3 leading-relaxed", className)} />;
-});
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement> & { icon?: ReactNode }>(
+  function Textarea({ className, icon, ...props }, ref) {
+    return (
+      <div className="relative">
+        {icon && <span className="absolute left-3.5 top-3 text-muted pointer-events-none" aria-hidden>{icon}</span>}
+        <textarea
+          ref={ref}
+          {...props}
+          className={cx(CONTROL, "mt-1.5 min-h-24 resize-y py-3 leading-relaxed", icon ? "pl-11" : undefined, className)}
+        />
+      </div>
+    );
+  }
+);
 
 export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement> & { wrapperClassName?: string }>(
   function Select({ className, wrapperClassName, children, ...props }, ref) {

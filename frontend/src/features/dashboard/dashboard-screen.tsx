@@ -15,6 +15,8 @@ import { Segmented } from "@/components/ui/segmented";
 import { DailyReportsChart } from "@/features/analytics/charts";
 import { useAnalyticsSummary, useMapPoints } from "@/features/analytics/hooks";
 import { MapView } from "@/features/analytics/map-view";
+import { HeatmapMap, HeatLegend } from "@/features/analytics/heatmap-layer";
+import type { MapPoint } from "@/types";
 import { useAuth } from "@/features/auth/auth-context";
 import { useReportsFeed } from "@/features/reports/hooks";
 import { ReportRow } from "@/features/reports/report-row";
@@ -182,7 +184,14 @@ function MiniMap() {
             <ErrorState message={map.error} onRetry={map.reload} />
           </div>
         ) : map.data ? (
-          <MapView points={map.data.points} className="absolute inset-0 h-full" interactive={false} />
+          <div className="absolute inset-0">
+            <HeatmapMap
+              points={map.data.points.map(p => ({ lat: p.latitude, lng: p.longitude, weight: p.casesCount }))}
+              heatmapProps={{ radius: 28, maxOpacity: 0.85 }}
+              className="h-full w-full"
+            />
+            <HeatLegend minLabel="Fewer" maxLabel="More cases" className="absolute bottom-3 left-3 right-3 bg-white/90 backdrop-blur-sm rounded-xl p-2 ring-1 ring-inset ring-black/5" />
+          </div>
         ) : (
           <Skeleton className="absolute inset-0 rounded-none" />
         )}

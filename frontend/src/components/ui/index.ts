@@ -40,5 +40,16 @@ export {
   CardGrid,
   DashboardGrid,
 } from "./animated-cards";
+export {
+  FieldArray,
+  FloatingLabelField,
+  FloatingLabelInput,
+  FloatingLabelSelect,
+  FloatingLabelTextarea,
+  Form,
+  FormActions,
+  FormSection as FormSectionV2,
+  ServerErrors as FormServerErrors,
+} from "./form";
 export { ToastProvider, useToast, type ToastApi, type ToastInput } from "./toast";
 export { HoneycombBackground, GradientMeshBackground, GridPatternBackground } from "@/components/brand/honeycomb-bg";

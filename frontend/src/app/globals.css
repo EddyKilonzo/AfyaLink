@@ -66,27 +66,32 @@
   --radius-xl: 16px;
   --radius-2xl: 22px;
 
-  /* Elevation: layered, green-tinted, never a flat grey blur */
-  --shadow-xs: 0 1px 2px rgb(11 61 53 / 0.06);
-  --shadow-sm: 0 1px 2px rgb(11 61 53 / 0.05), 0 2px 8px -2px rgb(11 61 53 / 0.08);
-  --shadow-md: 0 1px 2px rgb(11 61 53 / 0.05), 0 8px 20px -6px rgb(11 61 53 / 0.12), 0 2px 6px -2px rgb(11 61 53 / 0.06);
-  --shadow-lg: 0 2px 4px rgb(11 61 53 / 0.04), 0 18px 44px -14px rgb(11 61 53 / 0.22), 0 6px 14px -6px rgb(11 61 53 / 0.08);
-  --shadow-xl: 0 2px 6px rgb(11 61 53 / 0.05), 0 32px 72px -20px rgb(11 61 53 / 0.32), 0 10px 24px -10px rgb(11 61 53 / 0.14);
-  --shadow-ring: 0 0 0 1px rgb(11 61 53 / 0.06);
-  /* Cards and base surfaces: hairline ring + contact shadow + soft ambient lift + depth layers. */
-  --shadow-card: 0 0 0 1px rgb(11 61 53 / 0.055), 0 1px 2px rgb(11 61 53 / 0.06), 0 4px 10px -4px rgb(11 61 53 / 0.08), 0 16px 32px -20px rgb(11 61 53 / 0.18);
-  --shadow-card-hover: 0 0 0 1px rgb(11 61 53 / 0.07), 0 2px 4px rgb(11 61 53 / 0.06), 0 10px 20px -8px rgb(11 61 53 / 0.14), 0 28px 48px -24px rgb(11 61 53 / 0.26);
-  --shadow-glow: 0 0 0 4px rgb(20 108 90 / 0.14);
+  /* Elevation: layered, blue-tinted primary shadow for all cards and components */
+  --shadow-primary: rgb(38, 57, 77) 0px 20px 30px -10px;
+  --shadow-primary-hover: rgb(38, 57, 77) 0px 28px 40px -12px;
+  --shadow-primary-pressed: rgb(38, 57, 77) 0px 8px 16px -8px;
   
-  /* Enhanced 3D shadows with depth and realism */
-  --shadow-card-deep: 0 0 0 1px rgb(11 61 53 / 0.05), 0 2px 4px -1px rgb(11 61 53 / 0.08), 0 8px 16px -4px rgb(11 61 53 / 0.12), 0 24px 48px -12px rgb(11 61 53 / 0.18), 0 40px 80px -20px rgb(11 61 53 / 0.14);
-  --shadow-card-deep-hover: 0 0 0 1px rgb(11 61 53 / 0.07), 0 4px 8px -2px rgb(11 61 53 / 0.1), 0 16px 32px -8px rgb(11 61 53 / 0.16), 0 32px 64px -16px rgb(11 61 53 / 0.22), 0 56px 112px -28px rgb(11 61 53 / 0.18);
-  --shadow-floating: 0 0 0 1px rgb(11 61 53 / 0.05), 0 8px 16px -4px rgb(11 61 53 / 0.1), 0 24px 48px -8px rgb(11 61 53 / 0.16), 0 48px 96px -16px rgb(11 61 53 / 0.2), 0 80px 160px -24px rgb(11 61 53 / 0.15);
-  --shadow-floating-hover: 0 0 0 1px rgb(11 61 53 / 0.07), 0 12px 24px -6px rgb(11 61 53 / 0.12), 0 32px 64px -12px rgb(11 61 53 / 0.18), 0 64px 128px -24px rgb(11 61 53 / 0.24), 0 100px 200px -32px rgb(11 61 53 / 0.18);
-  --shadow-pressed: 0 0 0 1px rgb(11 61 53 / 0.06), 0 1px 2px rgb(11 61 53 / 0.08), 0 2px 4px -2px rgb(11 61 53 / 0.08);
-  --shadow-inner: inset 0 2px 4px -1px rgb(11 61 53 / 0.08), inset 0 1px 1px rgb(11 61 53 / 0.06);
-  --shadow-inner-deep: inset 0 4px 8px -2px rgb(11 61 53 / 0.12), inset 0 2px 2px rgb(11 61 53 / 0.08);
-  --shadow-outline: 0 0 0 1px rgb(11 61 53 / 0.06), 0 0 0 4px rgb(255 255 255 / 0.8);
+  /* Base shadows using primary as foundation */
+  --shadow-xs: 0 1px 2px rgb(38 57 77 / 0.06);
+  --shadow-sm: 0 1px 2px rgb(38 57 77 / 0.05), 0 2px 8px -2px rgb(38 57 77 / 0.08);
+  --shadow-md: 0 1px 2px rgb(38 57 77 / 0.05), 0 8px 20px -6px rgb(38 57 77 / 0.12), 0 2px 6px -2px rgb(38 57 77 / 0.06);
+  --shadow-lg: 0 2px 4px rgb(38 57 77 / 0.04), 0 18px 44px -14px rgb(38 57 77 / 0.22), 0 6px 14px -6px rgb(38 57 77 / 0.08);
+  --shadow-xl: 0 2px 6px rgb(38 57 77 / 0.05), 0 32px 72px -20px rgb(38 57 77 / 0.32), 0 10px 24px -10px rgb(38 57 77 / 0.14);
+  --shadow-ring: 0 0 0 1px rgb(38 57 77 / 0.06);
+  /* Cards and base surfaces: hairline ring + primary shadow */
+  --shadow-card: var(--shadow-ring), var(--shadow-primary);
+  --shadow-card-hover: var(--shadow-ring), var(--shadow-primary-hover);
+  --shadow-glow: 0 0 0 4px rgb(38 57 77 / 0.14);
+  
+  /* Enhanced 3D shadows with depth and realism - all using primary color */
+  --shadow-card-deep: var(--shadow-ring), 0 8px 16px -4px rgb(38 57 77 / 0.1), 0 24px 48px -12px rgb(38 57 77 / 0.18), 0 40px 80px -20px rgb(38 57 77 / 0.14);
+  --shadow-card-deep-hover: var(--shadow-ring), 0 16px 32px -8px rgb(38 57 77 / 0.12), 0 32px 64px -16px rgb(38 57 77 / 0.22), 0 56px 112px -28px rgb(38 57 77 / 0.18);
+  --shadow-floating: var(--shadow-ring), 0 12px 24px -6px rgb(38 57 77 / 0.1), 0 32px 64px -12px rgb(38 57 77 / 0.16), 0 56px 112px -20px rgb(38 57 77 / 0.2);
+  --shadow-floating-hover: var(--shadow-ring), 0 20px 40px -10px rgb(38 57 77 / 0.12), 0 48px 96px -20px rgb(38 57 77 / 0.18), 0 80px 160px -32px rgb(38 57 77 / 0.22);
+  --shadow-pressed: var(--shadow-ring), var(--shadow-primary-pressed);
+  --shadow-inner: inset 0 2px 4px -1px rgb(38 57 77 / 0.08), inset 0 1px 1px rgb(38 57 77 / 0.06);
+  --shadow-inner-deep: inset 0 4px 8px -2px rgb(38 57 77 / 0.12), inset 0 2px 2px rgb(38 57 77 / 0.08);
+  --shadow-outline: 0 0 0 1px rgb(38 57 77 / 0.06), 0 0 0 4px rgb(255 255 255 / 0.8);
   
   /* Colored shadows for brand elements */
   --shadow-brand-sm: 0 2px 4px -1px rgb(20 108 90 / 0.15), 0 4px 8px -2px rgb(20 108 90 / 0.1);
@@ -133,24 +138,30 @@
   --color-muted: #8aa099;
   --color-line: #1f332d;
   --color-line-strong: #2a453d;
-  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.4);
-  --shadow-sm: 0 2px 8px -4px rgb(0 0 0 / 0.5), 0 1px 2px rgb(0 0 0 / 0.4);
-  --shadow-md: 0 8px 24px -8px rgb(0 0 0 / 0.55), 0 1px 2px rgb(0 0 0 / 0.4);
-  --shadow-lg: 0 18px 44px -14px rgb(0 0 0 / 0.65), 0 2px 4px rgb(0 0 0 / 0.4);
-  --shadow-xl: 0 32px 72px -20px rgb(0 0 0 / 0.75), 0 2px 6px rgb(0 0 0 / 0.4);
-  --shadow-ring: 0 0 0 1px rgb(255 255 255 / 0.08);
-  --shadow-card: 0 0 0 1px rgb(255 255 255 / 0.06), 0 2px 8px -4px rgb(0 0 0 / 0.5), 0 16px 32px -20px rgb(0 0 0 / 0.6);
-  --shadow-card-hover: 0 0 0 1px rgb(255 255 255 / 0.09), 0 10px 24px -8px rgb(0 0 0 / 0.6), 0 28px 48px -24px rgb(0 0 0 / 0.7);
-  --shadow-glow: 0 0 0 4px rgb(20 108 90 / 0.28);
   
-  /* Enhanced 3D shadows for dark mode */
-  --shadow-card-deep: 0 0 0 1px rgb(255 255 255 / 0.05), 0 2px 4px -1px rgb(0 0 0 / 0.5), 0 8px 16px -4px rgb(0 0 0 / 0.55), 0 24px 48px -12px rgb(0 0 0 / 0.6), 0 40px 80px -20px rgb(0 0 0 / 0.55);
-  --shadow-card-deep-hover: 0 0 0 1px rgb(255 255 255 / 0.08), 0 4px 8px -2px rgb(0 0 0 / 0.55), 0 16px 32px -8px rgb(0 0 0 / 0.6), 0 32px 64px -16px rgb(0 0 0 / 0.65), 0 56px 112px -28px rgb(0 0 0 / 0.6);
-  --shadow-floating: 0 0 0 1px rgb(255 255 255 / 0.05), 0 8px 16px -4px rgb(0 0 0 / 0.5), 0 24px 48px -8px rgb(0 0 0 / 0.55), 0 48px 96px -16px rgb(0 0 0 / 0.6), 0 80px 160px -24px rgb(0 0 0 / 0.55);
-  --shadow-floating-hover: 0 0 0 1px rgb(255 255 255 / 0.08), 0 12px 24px -6px rgb(0 0 0 / 0.55), 0 32px 64px -12px rgb(0 0 0 / 0.6), 0 64px 128px -24px rgb(0 0 0 / 0.65), 0 100px 200px -32px rgb(0 0 0 / 0.6);
-  --shadow-pressed: 0 0 0 1px rgb(255 255 255 / 0.07), 0 1px 2px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.45);
-  --shadow-inner: inset 0 2px 4px -1px rgb(0 0 0 / 0.5), inset 0 1px 1px rgb(0 0 0 / 0.4);
-  --shadow-inner-deep: inset 0 4px 8px -2px rgb(0 0 0 / 0.55), inset 0 2px 2px rgb(0 0 0 / 0.45);
+  /* Dark mode primary shadow - slightly lighter blue for visibility on dark */
+  --shadow-primary: rgb(100, 140, 180) 0px 20px 30px -10px;
+  --shadow-primary-hover: rgb(100, 140, 180) 0px 28px 40px -12px;
+  --shadow-primary-pressed: rgb(100, 140, 180) 0px 8px 16px -8px;
+  
+  --shadow-xs: 0 1px 2px rgb(100 140 180 / 0.3);
+  --shadow-sm: 0 2px 8px -4px rgb(100 140 180 / 0.4), 0 1px 2px rgb(100 140 180 / 0.3);
+  --shadow-md: 0 8px 24px -8px rgb(100 140 180 / 0.5), 0 1px 2px rgb(100 140 180 / 0.3);
+  --shadow-lg: 0 18px 44px -14px rgb(100 140 180 / 0.6), 0 2px 4px rgb(100 140 180 / 0.3);
+  --shadow-xl: 0 32px 72px -20px rgb(100 140 180 / 0.7), 0 2px 6px rgb(100 140 180 / 0.3);
+  --shadow-ring: 0 0 0 1px rgb(255 255 255 / 0.08);
+  --shadow-card: var(--shadow-ring), var(--shadow-primary);
+  --shadow-card-hover: var(--shadow-ring), var(--shadow-primary-hover);
+  --shadow-glow: 0 0 0 4px rgb(100 140 180 / 0.2);
+  
+  /* Enhanced 3D shadows for dark mode - using primary color */
+  --shadow-card-deep: var(--shadow-ring), 0 8px 16px -4px rgb(100 140 180 / 0.4), 0 24px 48px -12px rgb(100 140 180 / 0.5), 0 40px 80px -20px rgb(100 140 180 / 0.45);
+  --shadow-card-deep-hover: var(--shadow-ring), 0 16px 32px -8px rgb(100 140 180 / 0.45), 0 32px 64px -16px rgb(100 140 180 / 0.55), 0 56px 112px -28px rgb(100 140 180 / 0.5);
+  --shadow-floating: var(--shadow-ring), 0 12px 24px -6px rgb(100 140 180 / 0.4), 0 32px 64px -12px rgb(100 140 180 / 0.5), 0 56px 112px -20px rgb(100 140 180 / 0.55);
+  --shadow-floating-hover: var(--shadow-ring), 0 20px 40px -10px rgb(100 140 180 / 0.45), 0 48px 96px -20px rgb(100 140 180 / 0.55), 0 80px 160px -32px rgb(100 140 180 / 0.6);
+  --shadow-pressed: var(--shadow-ring), var(--shadow-primary-pressed);
+  --shadow-inner: inset 0 2px 4px -1px rgb(100 140 180 / 0.4), inset 0 1px 1px rgb(100 140 180 / 0.3);
+  --shadow-inner-deep: inset 0 4px 8px -2px rgb(100 140 180 / 0.5), inset 0 2px 2px rgb(100 140 180 / 0.4);
   --shadow-outline: 0 0 0 1px rgb(255 255 255 / 0.08), 0 0 0 4px rgb(255 255 255 / 0.1);
   
   /* Colored shadows for brand elements in dark mode */

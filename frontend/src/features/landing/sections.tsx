@@ -1,27 +1,39 @@
 import {
+  AlertCircle,
   ArrowRight,
   BarChart3,
   BellRing,
   CheckCircle2,
+  Circle,
   ClipboardCheck,
   Clock,
   CloudOff,
   EyeOff,
+  ExternalLink,
   FilePlus2,
+  FileText,
   FlaskConical,
+  Globe,
   HardDrive,
+  HeartPulse,
+  Mail,
   MapPinned,
   RefreshCw,
   ShieldCheck,
   Smartphone,
+  Stethoscope,
+  Target,
   UploadCloud,
   Users,
+  Zap,
 } from "lucide-react";
 import { DrawnBorder } from "@/components/brand/drawn-border";
 import { HexTexture } from "@/components/brand/hex-texture";
 import { EmptyMap, SignalWave, SyncStatusStrip, SyncUpload } from "@/components/illustrations";
 import { Reveal } from "@/components/motion";
 import { ButtonAnchor, ButtonLink } from "@/components/ui";
+import { AnimatedCard, CardGrid, FeatureCard, MetricCard } from "@/components/ui";
+import { motion } from "motion/react";
 
 /* ---------------------------------------------------------------- Features */
 
@@ -398,6 +410,73 @@ export function Impact() {
             </Reveal>
           ))}
         </ul>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ About */
+
+const METRICS = [
+  { label: "Reports processed", value: "12,840+", icon: FileText },
+  { label: "Active volunteers", value: "480+", icon: Users },
+  { label: "Counties covered", value: "6", icon: MapPinned },
+  { label: "Avg. sync time", value: "< 3s", icon: Zap },
+];
+
+const LINKS = [
+  { label: "Documentation", href: "https://afyalink-docs.example.com", icon: FileText },
+  { label: "Report an issue", href: "https://github.com/afyalink/afyalink/issues", icon: AlertCircle },
+  { label: "Contact us", href: "mailto:hello@afyalink.example.com", icon: Mail },
+];
+
+export function About() {
+  return (
+    <section id="about" className="scroll-mt-20 border-y border-line bg-surface py-20 sm:py-28">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <Reveal className="max-w-3xl">
+          <h2 className="text-h2 text-brand-950">About AfyaLink</h2>
+          <p className="text-lead mt-4 text-muted">
+            AfyaLink is an open-source platform that helps community health volunteers record, sync, and act on health observations — even when the signal drops.
+          </p>
+        </Reveal>
+
+        <Reveal delay={0.06} className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {METRICS.map(({ label, value, icon: Icon }, i) => (
+            <div key={label} className="rounded-[var(--radius-xl)] bg-white p-6 shadow-[var(--shadow-ring),var(--shadow-sm)] ring-1 ring-inset ring-line">
+              <Icon className="size-6 text-brand-600" aria-hidden />
+              <p className="mt-4 text-3xl font-semibold tracking-tight tabular-nums text-ink">{value}</p>
+              <p className="mt-1 text-sm text-muted">{label}</p>
+            </div>
+          ))}
+        </Reveal>
+
+        <Reveal delay={0.12} className="mt-16 rounded-[var(--radius-2xl)] bg-brand-900 p-6 text-white sm:p-10">
+          <div className="grid gap-8 md:grid-cols-[1fr_auto] md:items-center">
+            <div>
+              <h3 className="text-xl font-semibold tracking-tight">Academic prototype — not for clinical use</h3>
+              <p className="mt-2 max-w-xl leading-relaxed text-brand-100">
+                AfyaLink is a research project exploring offline-first health data collection. All data shown is synthetic.
+                It is not connected to national health information systems and should not be used for clinical decision-making.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-3 md:justify-end">
+              {LINKS.map(({ label, href, icon: Icon }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm font-medium text-brand-100 hover:bg-white/20 transition-colors ring-1 ring-inset ring-white/10"
+                >
+                  <Icon className="size-4" aria-hidden />
+                  {label}
+                  <ExternalLink className="size-3.5 opacity-60" aria-hidden />
+                </a>
+              ))}
+            </div>
+          </div>
+        </Reveal>
       </div>
     </section>
   );
