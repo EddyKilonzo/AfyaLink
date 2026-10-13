@@ -12,6 +12,7 @@ import { toPublicUser, UsersService, type PublicUser } from '../users/users.serv
 import { LoginAttemptsService } from './login-attempts.service.js';
 import { MfaService } from './mfa.service.js';
 import { SessionRevocationService } from './session-revocation.service.js';
+import { CloudinaryService } from '../cloudinary/cloudinary.service.js';
 
 // Compared against when the email is unknown so response timing does not
 // reveal which accounts exist.
@@ -46,6 +47,7 @@ export class AuthService {
     private readonly revocations: SessionRevocationService,
     private readonly mfa: MfaService,
     private readonly audit: AuditService,
+    private readonly cloudinary: CloudinaryService,
   ) {}
 
   /**
@@ -134,6 +136,21 @@ export class AuthService {
       return toPublicUser(user);
     } catch (error) {
       throw toHttpException(error, this.logger, 'Load current user');
+    }
+  }
+
+  async updateProfilePicture(
+    session: SessionUser,
+    file: Express.Multer.File,
+  ): Promise<PublicUser> {
+    try {
+      const folder = `afyalink/users/${session.id}/avatar`;
+      const publicId = `avatar-${session.id}`;
+      const result = await this.cloudinary.uploadImage(file, folder, publicId);
+      const avatarUrl = result.secure_url;
+      return await this.users.updateAvatar(session.id, avatarUrl);
+    } catch (error) {
+      throw toHttpException(error, this.logger, 'Update profile picture');
     }
   }
 

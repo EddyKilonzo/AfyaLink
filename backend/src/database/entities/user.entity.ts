@@ -17,7 +17,7 @@ export enum UserRole {
 
 @Entity({ name: 'users' })
 export class User {
-  @PrimaryColumn({ type: 'char', length: 36 })
+  @PrimaryColumn({ type: 'uuid' })
   id: string;
 
   @Column({ name: 'full_name', type: 'varchar', length: 120 })
@@ -35,7 +35,7 @@ export class User {
   @Column({ type: 'enum', enum: UserRole, default: UserRole.CHV })
   role: UserRole;
 
-  @Column({ name: 'location_id', type: 'int', unsigned: true, nullable: true })
+  @Column({ name: 'location_id', type: 'int', nullable: true })
   locationId: number | null;
 
   @ManyToOne(() => Location, { nullable: true, onDelete: 'SET NULL' })
@@ -53,19 +53,22 @@ export class User {
   mfaSecret: string | null;
 
   /** Last accepted TOTP time step, so a code cannot be used twice. */
-  @Column({ name: 'mfa_last_step', type: 'bigint', unsigned: true, nullable: true, select: false })
+  @Column({ name: 'mfa_last_step', type: 'bigint', nullable: true, select: false })
   mfaLastStep: string | null;
 
-  @Column({ name: 'last_login_at', type: 'datetime', precision: 6, nullable: true })
+  @Column({ name: 'last_login_at', type: 'timestamptz', precision: 6, nullable: true })
   lastLoginAt: Date | null;
 
+  @Column({ name: 'avatar_url', type: 'varchar', length: 500, nullable: true })
+  avatarUrl: string | null;
+
   /** Sessions issued before this instant are rejected (set on password change/reset, deactivation, role change). */
-  @Column({ name: 'tokens_valid_after', type: 'datetime', precision: 6, nullable: true })
+  @Column({ name: 'tokens_valid_after', type: 'timestamptz', precision: 6, nullable: true })
   tokensValidAfter: Date | null;
 
-  @CreateDateColumn({ name: 'created_at', type: 'datetime', precision: 6 })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz', precision: 6 })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at', type: 'datetime', precision: 6 })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz', precision: 6 })
   updatedAt: Date;
 }

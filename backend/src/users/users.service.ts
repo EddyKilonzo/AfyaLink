@@ -21,7 +21,7 @@ import type { CreateUserDto, ListUsersQueryDto, UpdateUserDto } from './dto/user
 
 export type PublicUser = Pick<
   User,
-  'id' | 'fullName' | 'email' | 'phone' | 'role' | 'locationId' | 'isActive' | 'mfaEnabled' | 'lastLoginAt'
+  'id' | 'fullName' | 'email' | 'phone' | 'role' | 'locationId' | 'isActive' | 'mfaEnabled' | 'lastLoginAt' | 'avatarUrl'
 >;
 
 export function toPublicUser(user: User): PublicUser {
@@ -35,6 +35,7 @@ export function toPublicUser(user: User): PublicUser {
     isActive: user.isActive,
     mfaEnabled: user.mfaEnabled,
     lastLoginAt: user.lastLoginAt,
+    avatarUrl: user.avatarUrl,
   };
 }
 
@@ -254,6 +255,18 @@ export class UsersService {
 
   invalidateSession(id: string): void {
     this.sessionCache.delete(id);
+  }
+
+  async updateAvatar(id: string, avatarUrl: string): Promise<PublicUser> {
+    try {
+      this.db.assertReady();
+      await this.users.update({ id }, { avatarUrl });
+      this.invalidateSession(id);
+      const user = await this.users.findOneOrFail({ where: { id } });
+      return toPublicUser(user);
+    } catch (error) {
+      throw toHttpException(error, this.logger, 'Update avatar');
+    }
   }
 
   private async setPassword(id: string, password: string): Promise<Date> {

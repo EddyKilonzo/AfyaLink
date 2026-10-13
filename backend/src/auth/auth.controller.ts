@@ -1,7 +1,8 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Logger, Post, Req, Res } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, HttpCode, HttpStatus, Logger, Post, Req, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
 import type { CookieOptions, Request, Response } from 'express';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { AuditService } from '../audit/audit.service.js';
 import { CSRF_COOKIE, SESSION_COOKIE } from '../common/constants.js';
 import {
@@ -127,6 +128,26 @@ export class AuthController {
       return { user, csrfToken: this.setCsrfCookie(res, jti) };
     } catch (error) {
       throw toHttpException(error, this.logger, 'POST /auth/change-password');
+    }
+  }
+
+  @Post('profile/picture')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @UseInterceptors(FileInterceptor('avatar', { limits: { fileSize: 5 * 1024 * 1024 } }))
+  async uploadProfilePicture(
+    @CurrentUser() session: SessionUser,
+    @UploadedFile() file: Express.Multer.File,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    try {
+      if (!file) {
+        throw new BadRequestException('No file uploaded.');
+      }
+      const user = await this.auth.updateProfilePicture(session, file);
+      return { user, csrfToken: this.setCsrfCookie(res, session.id) };
+    } catch (error) {
+      throw toHttpException(error, this.logger, 'POST /auth/profile/picture');
     }
   }
 

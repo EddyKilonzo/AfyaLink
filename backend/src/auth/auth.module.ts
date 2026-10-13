@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import type { AppConfig } from '../config/configuration.js';
 import { UsersModule } from '../users/users.module.js';
+import { CloudinaryModule } from '../cloudinary/cloudinary.module.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { CsrfService } from './csrf.service.js';
@@ -14,6 +15,7 @@ import { SessionRevocationService } from './session-revocation.service.js';
 @Module({
   imports: [
     UsersModule,
+    CloudinaryModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService<AppConfig, true>) => {
