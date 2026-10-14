@@ -312,35 +312,13 @@ export interface FormProps {
   className?: string;
   initialValues?: Record<string, string>;
   validate?: (data: FormData) => Record<string, string>;
-  revalidateOnChange?: boolean;
 }
 
-export function Form({ onSubmit, children, className, initialValues = {}, validate, revalidateOnChange = true }: FormProps) {
+export function Form({ onSubmit, children, className, initialValues = {}, validate }: FormProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");
   const formRef = useRef<HTMLFormElement>(null);
-
-  const handleBlur = useCallback((e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setTouched((prev) => ({ ...prev, [e.target.name]: true }));
-  }, []);
-
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-      if (revalidateOnChange && touched[e.target.name] && errors[e.target.name]) {
-        const form = formRef.current;
-        if (form) {
-          const formData = new FormData(form);
-          const validationErrors = validate?.(formData) || {};
-          if (!validationErrors[e.target.name]) {
-            setErrors((prev) => ({ ...prev, [e.target.name]: "" }));
-          }
-        }
-      }
-    },
-    [errors, revalidateOnChange, touched, validate]
-  );
 
   const handleSubmit = useCallback(
     async (e: FormEvent<HTMLFormElement>) => {
@@ -350,10 +328,6 @@ export function Form({ onSubmit, children, className, initialValues = {}, valida
 
       const validationErrors = validate?.(formData) || {};
       const hasErrors = Object.values(validationErrors).some((v) => v);
-      const allTouched = Object.fromEntries(
-        Array.from(formData.keys()).map((key) => [key, true])
-      );
-      setTouched(allTouched);
 
       if (hasErrors) {
         setErrors(validationErrors);
@@ -388,7 +362,6 @@ export function Form({ onSubmit, children, className, initialValues = {}, valida
 
   const resetForm = useCallback(() => {
     setErrors({});
-    setTouched({});
     setSubmitStatus("idle");
     formRef.current?.reset();
     if (initialValues) {

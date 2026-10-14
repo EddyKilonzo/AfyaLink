@@ -54,7 +54,7 @@ export function ProfileSection() {
     setPreview(objectUrl);
 
     try {
-      const updatedUser = await updateProfilePicture(file);
+      await updateProfilePicture(file);
       toast.success("Profile picture updated");
       // Keep the preview from the object URL; it will be replaced by the real URL on next render
     } catch (error) {
@@ -79,11 +79,11 @@ export function ProfileSection() {
           <div className="flex items-center gap-4">
             <div className="relative shrink-0">
               {preview ? (
-                <img
-                  src={preview}
-                  alt={`${user?.fullName}'s profile picture`}
-                  className="size-24 rounded-full bg-sunken object-cover ring-2 ring-brand-100"
-                />
+                  <img
+                    src={preview}
+                    alt={`${user?.fullName}'s profile picture`}
+                    className="size-24 rounded-full bg-sunken object-cover ring-2 ring-brand-100"
+                  />
               ) : (
                 <div className="size-24 rounded-full bg-brand-100 flex items-center justify-center ring-2 ring-brand-200">
                   <UserIcon className="size-10 text-brand-600" aria-hidden />

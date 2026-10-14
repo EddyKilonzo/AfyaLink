@@ -4,7 +4,6 @@ import {
   BarChart3,
   BellRing,
   CheckCircle2,
-  Circle,
   ClipboardCheck,
   Clock,
   CloudOff,
@@ -13,16 +12,12 @@ import {
   FilePlus2,
   FileText,
   FlaskConical,
-  Globe,
   HardDrive,
-  HeartPulse,
   Mail,
   MapPinned,
   RefreshCw,
   ShieldCheck,
   Smartphone,
-  Stethoscope,
-  Target,
   UploadCloud,
   Users,
   Zap,
@@ -32,8 +27,6 @@ import { HexTexture } from "@/components/brand/hex-texture";
 import { EmptyMap, SignalWave, SyncStatusStrip, SyncUpload } from "@/components/illustrations";
 import { Reveal } from "@/components/motion";
 import { ButtonAnchor, ButtonLink } from "@/components/ui";
-import { AnimatedCard, CardGrid, FeatureCard, MetricCard } from "@/components/ui";
-import { motion } from "motion/react";
 
 /* ---------------------------------------------------------------- Features */
 
@@ -442,7 +435,7 @@ export function About() {
         </Reveal>
 
         <Reveal delay={0.06} className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {METRICS.map(({ label, value, icon: Icon }, i) => (
+          {METRICS.map(({ label, value, icon: Icon }) => (
             <div key={label} className="rounded-[var(--radius-xl)] bg-white p-6 shadow-[var(--shadow-ring),var(--shadow-sm)] ring-1 ring-inset ring-line">
               <Icon className="size-6 text-brand-600" aria-hidden />
               <p className="mt-4 text-3xl font-semibold tracking-tight tabular-nums text-ink">{value}</p>
