@@ -14,9 +14,7 @@ import { Button, ButtonLink, EmptyState, ErrorState, LoadingState, Panel, PanelH
 import { Segmented } from "@/components/ui/segmented";
 import { DailyReportsChart } from "@/features/analytics/charts";
 import { useAnalyticsSummary, useMapPoints } from "@/features/analytics/hooks";
-import { MapView } from "@/features/analytics/map-view";
 import { HeatmapMap, HeatLegend } from "@/features/analytics/heatmap-layer";
-import type { MapPoint } from "@/types";
 import { useAuth } from "@/features/auth/auth-context";
 import { useReportsFeed } from "@/features/reports/hooks";
 import { ReportRow } from "@/features/reports/report-row";
