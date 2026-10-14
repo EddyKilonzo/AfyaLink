@@ -144,7 +144,7 @@ export class MailService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /** Renders and sends an account/security notice without blocking the caller. */
+/** Renders and sends an account/security notice without blocking the caller. */
   async notifyAccount(recipient: EmailRecipient, event: AccountEmail): Promise<void> {
     const rendered = await renderAccountEmail(recipient, event, { appUrl: this.mail.appUrl, at: new Date() });
     this.track(this.send({ to: recipient.email, ...rendered }));

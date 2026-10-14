@@ -69,12 +69,18 @@ function formatUtc(at: Date): string {
 
 function renderTemplate(templateName: string, data: Record<string, unknown>): Promise<string> {
   const templatePath = path.join(TEMPLATES_DIR, `${templateName}.ejs`);
-  return renderFile(templatePath, data, { async: true });
+  // renderFile is async by default. Do NOT pass `async: true` here: the
+  // templates use `<%- include(...) -%>`, which under async mode returns a
+  // Promise that EJS stringifies as "[object Promise]".
+  return renderFile(templatePath, data);
 }
 
 export async function renderAccountEmail(recipient: EmailRecipient, event: AccountEmail, ctx: TemplateContext): Promise<{ subject: string; text: string; html: string }> {
   const name = greetingName(recipient.fullName);
   const when = `Time: ${formatUtc(ctx.at)}`;
+  // Templates build HTML by string concatenation, so escape the name once
+  // here and hand the safe copy to every template.
+  const safeName = escapeHtml(recipient.fullName);
 
   switch (event.kind) {
     case 'account_created': {
@@ -82,6 +88,7 @@ export async function renderAccountEmail(recipient: EmailRecipient, event: Accou
       const html = await renderTemplate('welcome', {
         subject,
         fullName: recipient.fullName,
+        safeName,
         role: event.role,
         appUrl: ctx.appUrl,
       });
@@ -107,6 +114,7 @@ export async function renderAccountEmail(recipient: EmailRecipient, event: Accou
       const html = await renderTemplate('notification', {
         subject,
         fullName: recipient.fullName,
+        safeName,
         title: 'Password Changed',
         message: 'The password for your AfyaLink account was just changed. Your other devices have been signed out.',
         appUrl: ctx.appUrl,
@@ -133,6 +141,7 @@ export async function renderAccountEmail(recipient: EmailRecipient, event: Accou
       const html = await renderTemplate('password-reset', {
         subject,
         fullName: recipient.fullName,
+        safeName,
         appUrl: ctx.appUrl,
         resetUrl: ctx.resetUrl || `${ctx.appUrl}/login`,
       });
@@ -159,6 +168,7 @@ export async function renderAccountEmail(recipient: EmailRecipient, event: Accou
       const html = await renderTemplate('mfa-change', {
         subject,
         fullName: recipient.fullName,
+        safeName,
         enabled: true,
         appUrl: ctx.appUrl,
       });
@@ -183,6 +193,7 @@ export async function renderAccountEmail(recipient: EmailRecipient, event: Accou
       const html = await renderTemplate('mfa-change', {
         subject,
         fullName: recipient.fullName,
+        safeName,
         enabled: false,
         appUrl: ctx.appUrl,
       });
@@ -207,6 +218,7 @@ export async function renderAccountEmail(recipient: EmailRecipient, event: Accou
       const html = await renderTemplate('mfa-change', {
         subject,
         fullName: recipient.fullName,
+        safeName,
         enabled: false,
         appUrl: ctx.appUrl,
       });
@@ -233,6 +245,7 @@ export async function renderAccountEmail(recipient: EmailRecipient, event: Accou
       const html = await renderTemplate('notification', {
         subject,
         fullName: recipient.fullName,
+        safeName,
         title: 'Signed Out Everywhere',
         message: 'Every session of your AfyaLink account was ended, on every device.',
         appUrl: ctx.appUrl,
@@ -259,6 +272,7 @@ export async function renderAccountEmail(recipient: EmailRecipient, event: Accou
       const html = await renderTemplate('notification', {
         subject,
         fullName: recipient.fullName,
+        safeName,
         title: 'Account Deactivated',
         message: 'An administrator deactivated your AfyaLink account. You can no longer sign in. Reports that had not synced stay on your device. Ask your administrator if you need access again.',
         appUrl: ctx.appUrl,
@@ -284,6 +298,7 @@ export async function renderAccountEmail(recipient: EmailRecipient, event: Accou
       const html = await renderTemplate('notification', {
         subject,
         fullName: recipient.fullName,
+        safeName,
         title: 'Account Reactivated',
         message: 'An administrator reactivated your AfyaLink account. You can sign in again.',
         appUrl: ctx.appUrl,
@@ -310,6 +325,7 @@ export async function renderAccountEmail(recipient: EmailRecipient, event: Accou
       const html = await renderTemplate('notification', {
         subject,
         fullName: recipient.fullName,
+        safeName,
         title: 'Role Changed',
         message: `An administrator changed your AfyaLink role to ${ROLE_NAMES[event.role]}. You have been signed out; sign in again to continue.`,
         appUrl: ctx.appUrl,
@@ -337,11 +353,10 @@ export async function renderAccountEmail(recipient: EmailRecipient, event: Accou
 }
 
 export function escapeHtml(value: string): string {
-  const apos = "\u0027";
   return value
-    .replace(/&/g, '&')
-    .replace(/</g, '<')
-    .replace(/>/g, '>')
-    .replace(/"/g, '"')
-    .replace(/'/g, apos);
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }

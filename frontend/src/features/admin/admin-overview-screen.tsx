@@ -28,7 +28,8 @@ import type { MapMode } from "@/features/analytics/report-map";
 import { useServerReports } from "@/features/reports/hooks";
 import { ReportRow } from "@/features/reports/report-row";
 import { CATEGORY_LABELS, STATUS_LABELS } from "@/types";
-import { useExportReports } from "./hooks";
+import { useAuth } from "@/features/auth/auth-context";
+import { useExportReports, useExportReportsPdf } from "./hooks";
 
 const PERIODS = [
   { value: 7, label: "7d" },
@@ -41,7 +42,9 @@ export function AdminOverviewScreen() {
   const [days, setDays] = useState(30);
   const summary = useAnalyticsSummary(days);
   const exporter = useExportReports();
+  const pdfExporter = useExportReportsPdf();
   const toast = useToast();
+  const { user } = useAuth();
   const s = summary.data;
 
   async function exportCsv() {
@@ -49,11 +52,21 @@ export function AdminOverviewScreen() {
     if (filename) toast.success("Export ready", `${filename} has been downloaded.`);
   }
 
+  async function exportPdf() {
+    if (!user) return;
+    const filename = await pdfExporter.run({ from: s?.since }, { fullName: user.fullName, role: user.role });
+    if (filename) toast.success("PDF opened", "Save it from the print dialog as PDF.");
+  }
+
   useEffect(() => {
     if (exporter.error) toast.error("Export failed", exporter.error);
   }, [exporter.error, toast]);
 
-return (
+  useEffect(() => {
+    if (pdfExporter.error) toast.error("PDF failed", pdfExporter.error);
+  }, [pdfExporter.error, toast]);
+
+  return (
     <div className="space-y-6 sm:space-y-8">
       <PageHeader
         title="Overview"
@@ -63,6 +76,9 @@ return (
             <Segmented label="Period" size="sm" value={days} onChange={setDays} options={PERIODS} />
             <Button variant="outline" size="sm" loading={exporter.pending} onClick={() => void exportCsv()} icon={<Download className="size-4" aria-hidden />}>
               Export CSV
+            </Button>
+            <Button variant="outline" size="sm" loading={pdfExporter.pending} onClick={() => void exportPdf()} icon={<FileText className="size-4" aria-hidden />}>
+              Export PDF
             </Button>
           </>
         }

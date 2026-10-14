@@ -11,6 +11,7 @@ import { ConnectivityBanner, SyncNotifier, SyncStatusPill, useSyncSummary } from
 import { SiteFooter } from "@/components/site/site-footer";
 import { ThemeToggle } from "@/components/theme";
 import { InstallButton } from "@/hooks/use-pwa-install";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { NAV, flatNav, pageTitle, type NavItem } from "@/components/shell/nav";
 import { useSidebarCollapsed } from "@/components/shell/use-sidebar";
 import { cx } from "@/components/ui/cx";
@@ -57,10 +58,27 @@ function useSignOut() {
 function ShellFrame({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { user } = useAuth();
+  const router = useRouter();
   usePersistentStorage();
   const [moreOpen, setMoreOpen] = useState(false);
   const { collapsed, toggle } = useSidebarCollapsed();
+
+  useKeyboardShortcuts(
+    [
+      { keys: ["n"], description: "Record a new health report", action: () => router.push("/reports/new") },
+      { keys: ["s"], description: "Go to Sync & offline", action: () => router.push("/sync") },
+      { keys: ["m"], description: "Open the disease map", action: () => router.push("/maps") },
+      { keys: ["?"], description: "Show this help page", action: () => router.push("/help") },
+      { keys: ["g", "d"], description: "Go to dashboard", action: () => router.push("/dashboard") },
+      { keys: ["g", "r"], description: "Go to reports", action: () => router.push("/reports") },
+      { keys: ["g", "s"], description: "Go to settings", action: () => router.push("/settings") },
+      { keys: ["escape"], description: "Close menus and dialogs", action: () => setMoreOpen(false) },
+    ],
+    [router],
+  );
+
   if (!user) return null;
+
   const role = user.role;
   const home = HOME_BY_ROLE[role];
 
@@ -191,7 +209,7 @@ function SidebarFooter({ collapsed }: { collapsed: boolean }) {
         className={cx("flex items-center gap-3 rounded-[12px] p-1.5 transition-colors hover:bg-sunken", collapsed && "justify-center")}
         title="Settings"
       >
-        <Avatar name={user.fullName} />
+        <Avatar user={user} />
         <span className={cx("min-w-0", collapsed && "hidden")}>
           <span className="block truncate text-sm font-semibold text-ink">{user.fullName}</span>
           <span className="block truncate text-xs text-muted">{ROLE_LABELS[user.role]}</span>
@@ -201,16 +219,29 @@ function SidebarFooter({ collapsed }: { collapsed: boolean }) {
   );
 }
 
-function Avatar({ name, size = "md" }: { name: string; size?: "md" | "lg" }) {
+function Avatar({ user, size = "md" }: { user: { fullName: string; avatarUrl?: string | null }; size?: "md" | "lg" }) {
+  const sizeClass = size === "md" ? "size-9 text-xs" : "size-11 text-sm";
+  const ringClass = size === "md" ? "ring-2 ring-surface" : "ring-2 ring-surface";
+
+  if (user.avatarUrl) {
+    return (
+      <img
+        src={user.avatarUrl}
+        alt={`${user.fullName}'s profile picture`}
+        className={cx("grid shrink-0 place-items-center rounded-full bg-sunken object-cover", sizeClass, ringClass)}
+      />
+    );
+  }
+
   return (
     <span
       aria-hidden
       className={cx(
         "grid shrink-0 place-items-center rounded-full bg-brand-600 font-semibold text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.2)]",
-        size === "md" ? "size-9 text-xs" : "size-11 text-sm",
+        sizeClass,
       )}
     >
-      {initials(name)}
+      {initials(user.fullName)}
     </span>
   );
 }
@@ -246,7 +277,7 @@ function UserMenu() {
         aria-haspopup="menu"
         className="flex items-center gap-1.5 rounded-full p-0.5 pr-2 transition-colors hover:bg-sunken"
       >
-        <Avatar name={user.fullName} />
+        <Avatar user={user} />
         <ChevronDown className={cx("size-4 text-muted transition-transform duration-[var(--duration-ui)]", open && "rotate-180")} aria-hidden />
         <span className="sr-only">Account menu</span>
       </button>
@@ -380,7 +411,7 @@ function MoreSheet({ role, pathname, open, onClose }: { role: UserRole; pathname
   return (
     <Sheet open={open} onClose={onClose} title="More">
       <div className="mx-2 mb-3 flex items-center gap-3 rounded-2xl bg-sunken p-3">
-        <Avatar name={user.fullName} size="lg" />
+        <Avatar user={user} size="lg" />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-ink">{user.fullName}</p>
           <p className="truncate text-xs text-muted">{ROLE_LABELS[user.role]}</p>

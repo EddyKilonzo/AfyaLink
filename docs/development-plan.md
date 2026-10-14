@@ -67,6 +67,8 @@
 - [ ] Toasts with an auto-dismiss timer
 - [ ] Honeycomb background texture
 - [x] PWA hardening: PNG icons (192, 512, maskable 512, 180 apple-touch) from the flat SVG mark, icons and manifest precached, redirected pages never cached, service worker cache bumped to `afyalink-v3`
+- [x] Avatar support: Cloudinary upload (`POST /auth/profile/picture`, 5MB, 400×400 face-crop), `avatarUrl` on the user entity and `PublicUser` type, `Avatar` component in the app shell and profile settings render the image when present
+- [x] Keyboard shortcuts: `useKeyboardShortcuts` hook (order-independent combo matching, ignored while typing in inputs unless `scope: "input"`), wired into the app shell (`N`, `S`, `M`, `?`, `G+D`, `G+R`, `G+S`, `Escape`), plus a `/help` page that lists every shortcut
 
 ### Route wiring (from the scaffold phase)
 

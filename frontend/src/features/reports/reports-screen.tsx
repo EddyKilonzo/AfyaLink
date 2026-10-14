@@ -1,11 +1,14 @@
 "use client";
 
-import { FilePlus2, FileSearch, LayoutGrid, List } from "lucide-react";
+import { FilePlus2, FileSearch, FileText, LayoutGrid, List } from "lucide-react";
 import { useState } from "react";
 import { Stagger, StaggerItem } from "@/components/motion";
 import { Masonry, MasonryItem } from "@/components/masonry";
 import { Pagination } from "@/components/pagination";
-import { ButtonLink, EmptyState, ErrorState, FilterSelect, LoadingState, PageHeader, Panel } from "@/components/ui";
+import { Button, ButtonLink, EmptyState, ErrorState, FilterSelect, LoadingState, PageHeader, Panel } from "@/components/ui";
+import { useToast } from "@/components/ui/toast";
+import { useAuth } from "@/features/auth/auth-context";
+import { openPrintablePdf } from "@/lib/pdf-generator";
 import { CATEGORY_LABELS, REPORT_CATEGORIES, REPORT_STATUSES, STATUS_LABELS, type ReportCategory, type ReportStatus } from "@/types";
 import { useReportsFeed } from "./hooks";
 import { ReportCard } from "./report-card";
@@ -16,10 +19,57 @@ export function ReportsScreen() {
   const [category, setCategory] = useState<ReportCategory | "">("");
   const [status, setStatus] = useState<ReportStatus | "">("");
   const [view, setView] = useState<"grid" | "list">("grid");
+  const [exportingPdf, setExportingPdf] = useState(false);
   const feed = useReportsFeed({ page, limit: 20, category: category || undefined, status: status || undefined });
+  const { user } = useAuth();
+  const toast = useToast();
   const filtered = Boolean(category || status);
   const local = feed.items.filter((i) => i.source === "local");
   const server = feed.items.filter((i) => i.source === "server");
+
+  function reportStatus(item: (typeof feed.items)[number]): string {
+    const r = item.report as { status?: string };
+    return r.status || "Pending";
+  }
+
+  async function exportPdf() {
+    if (!user) return;
+    setExportingPdf(true);
+    try {
+      const stamp = new Date().toISOString().slice(0, 10);
+      openPrintablePdf(
+        {
+          title: `My reports — ${stamp}`,
+          subtitle: `${feed.items.length} report(s)${filtered ? " matching filters" : ""}`,
+          generatedAt: new Date().toISOString(),
+          generatedBy: user.fullName,
+          role: user.role,
+        },
+        [
+          {
+            heading: "Filters",
+            rows: [
+              { label: "Category", value: category || "All" },
+              { label: "Status", value: status || "Any" },
+            ],
+          },
+          {
+            heading: `Reports (${feed.items.length})`,
+            rows: feed.items.map((i) => ({
+              label: i.report.conditionName,
+              value: `${CATEGORY_LABELS[i.report.category]} · ${i.report.severity} · ${reportStatus(i)} · ${i.report.casesCount} case(s)`,
+            })),
+          },
+        ],
+        `my-reports-${stamp}.pdf`,
+      );
+      toast.success("PDF opened", "Save it from the print dialog as PDF.");
+    } catch (e) {
+      toast.error("PDF failed", e instanceof Error ? e.message : "Try again later.");
+    } finally {
+      setExportingPdf(false);
+    }
+  }
 
   const renderList = (items: typeof feed.items, hrefFor: (id: string) => string) =>
     view === "grid" ? (
@@ -46,9 +96,20 @@ export function ReportsScreen() {
         title="My reports"
         description="Everything you've recorded. Reports still on this device stay at the top until the server confirms them."
         action={
-          <ButtonLink href="/reports/new" icon={<FilePlus2 className="size-4" aria-hidden />} className="max-sm:w-full">
-            New report
-          </ButtonLink>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              loading={exportingPdf}
+              onClick={() => void exportPdf()}
+              icon={<FileText className="size-4" aria-hidden />}
+            >
+              Export PDF
+            </Button>
+            <ButtonLink href="/reports/new" icon={<FilePlus2 className="size-4" aria-hidden />} className="max-sm:w-full">
+              New report
+            </ButtonLink>
+          </div>
         }
       />
 

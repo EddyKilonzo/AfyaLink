@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, CheckCheck, Download, Eye, MapPin, PencilLine } from "lucide-react";
+import { ArrowLeft, CheckCheck, Eye, MapPin, PencilLine } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
@@ -10,8 +10,8 @@ import { Badge, Button, ButtonLink, DataList, Panel, PanelHeader, ReviewStatusBa
 import { useConfirm } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/features/auth/auth-context";
-import { useDownloadReportPdf } from "@/features/reports/hooks";
 import { useLocations } from "@/features/locations/hooks";
+import { openPrintablePdf } from "@/lib/pdf-generator";
 import { formatDateTime, formatRelative } from "@/lib/format";
 import { isUuid } from "@/lib/security";
 import { formatLocation } from "@/services/locations.service";
@@ -123,7 +123,7 @@ export function ReportDetailScreen() {
                     </ButtonLink>
                   )}
 
-                  <ReportPdfButton id={r.id} />
+                  <ReportPdfButton report={r} />
 
                   <RoleGate roles={["ADMIN"]}>
                     <ReviewActions report={r} onDone={report.reload} />
@@ -138,18 +138,56 @@ export function ReportDetailScreen() {
   );
 }
 
-function ReportPdfButton({ id }: { id: string }) {
-  const download = useDownloadReportPdf();
-  const toast = useToast();
+function ReportPdfButton({ report }: { report: ServerReport }) {
+  const { user } = useAuth();
   return (
     <Button
       variant="outline"
       className="w-full"
-      loading={download.pending}
       onClick={() => {
-        void download.run(id).catch((e) => toast.error("Could not download PDF", e instanceof Error ? e.message : "Try again later."));
+        openPrintablePdf(
+          {
+            title: `Report — ${report.conditionName}`,
+            subtitle: `${CATEGORY_LABELS[report.category]} · ${report.casesCount} case(s)`,
+            generatedAt: formatDateTime(new Date().toISOString()),
+            generatedBy: user?.fullName || "AfyaLink user",
+            role: user?.role || "CHV",
+          },
+          [
+            {
+              heading: "Report",
+              rows: [
+                { label: "Condition", value: report.conditionName },
+                { label: "Category", value: CATEGORY_LABELS[report.category] },
+                { label: "Severity", value: report.severity },
+                { label: "Cases", value: report.casesCount.toLocaleString() },
+                { label: "Age group", value: AGE_GROUP_LABELS[report.ageGroup] },
+                { label: "Status", value: STATUS_LABELS[report.status] },
+                { label: "Observed", value: formatDateTime(report.observedAt) },
+                { label: "Received", value: formatDateTime(report.receivedAt) },
+                { label: "Notes", value: report.notes || "—" },
+              ],
+            },
+            {
+              heading: "Location",
+              rows: [
+                { label: "Area", value: report.locationId ? `Area #${report.locationId}` : "No area recorded" },
+                { label: "GPS", value: report.latitude && report.longitude ? `${Number(report.latitude).toFixed(5)}, ${Number(report.longitude).toFixed(5)}` : "Not recorded" },
+              ],
+            },
+            ...(report.reviewNote
+              ? [
+                  {
+                    heading: "Review",
+                    rows: [{ label: "Reviewer note", value: report.reviewNote }],
+                  },
+                ]
+              : []),
+          ],
+          `report-${report.id.slice(0, 8)}.pdf`,
+        );
       }}
-      icon={<Download className="size-4" aria-hidden />}
+      icon={<Eye className="size-4" aria-hidden />}
     >
       Download as PDF
     </Button>

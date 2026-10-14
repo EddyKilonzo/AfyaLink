@@ -73,7 +73,7 @@ export function Features() {
           </Reveal>
 
           <Reveal className="md:col-span-2" delay={0.06}>
-            <article className="h-full rounded-[var(--radius-2xl)] bg-surface p-7 shadow-[var(--shadow-ring),var(--shadow-sm)]">
+            <article className="h-full rounded-[var(--radius-2xl)] bg-surface p-7 shadow-[var(--shadow-card)] transition-[box-shadow] duration-[var(--duration-ui)] hover:shadow-[var(--shadow-card-hover)]">
               <RefreshCw className="size-6 text-brand-600" aria-hidden />
               <h3 className="mt-5 text-xl font-semibold tracking-tight text-ink">Reliable synchronization</h3>
               <p className="mt-3 leading-relaxed text-muted">Uploads resume on their own. Retrying can never create a duplicate, and nothing is marked sent until the server says so.</p>
@@ -89,7 +89,7 @@ export function Features() {
           </Reveal>
 
           <Reveal className="md:col-span-3" delay={0.04}>
-            <article className="relative h-full overflow-hidden rounded-[var(--radius-2xl)] bg-surface p-7 shadow-[var(--shadow-ring),var(--shadow-sm)]">
+            <article className="relative h-full overflow-hidden rounded-[var(--radius-2xl)] bg-surface p-7 shadow-[var(--shadow-card)] transition-[box-shadow] duration-[var(--duration-ui)] hover:shadow-[var(--shadow-card-hover)]">
               <div className="flex items-start justify-between gap-6">
                 <div>
                   <h3 className="text-xl font-semibold tracking-tight text-ink">Community health mapping</h3>
@@ -101,7 +101,7 @@ export function Features() {
           </Reveal>
 
           <Reveal className="md:col-span-3" delay={0.08}>
-            <article className="h-full rounded-[var(--radius-2xl)] bg-surface p-7 shadow-[var(--shadow-ring),var(--shadow-sm)]">
+            <article className="h-full rounded-[var(--radius-2xl)] bg-surface p-7 shadow-[var(--shadow-card)] transition-[box-shadow] duration-[var(--duration-ui)] hover:shadow-[var(--shadow-card-hover)]">
               <BarChart3 className="size-6 text-brand-600" aria-hidden />
               <h3 className="mt-5 text-xl font-semibold tracking-tight text-ink">Actionable dashboards</h3>
               <p className="mt-3 max-w-sm leading-relaxed text-muted">Trends by day, county and condition, plus a review queue so every report is read and followed up.</p>
@@ -114,7 +114,7 @@ export function Features() {
           </Reveal>
 
           <Reveal className="md:col-span-6" delay={0.12}>
-            <article className="grid gap-6 rounded-[var(--radius-2xl)] bg-surface p-7 shadow-[var(--shadow-ring),var(--shadow-sm)] sm:grid-cols-3 sm:p-9">
+            <article className="grid gap-6 rounded-[var(--radius-2xl)] bg-surface p-7 shadow-[var(--shadow-card)] transition-[box-shadow] duration-[var(--duration-ui)] hover:shadow-[var(--shadow-card-hover)] sm:grid-cols-3 sm:p-9">
               <div className="flex flex-col gap-3">
                 <BellRing className="size-6 text-brand-600" aria-hidden />
                 <h3 className="text-lg font-semibold tracking-tight text-ink">Real-time alerts</h3>
@@ -202,7 +202,7 @@ export function HowItWorks() {
           </svg>
           {STEPS.map(({ Icon, title, text }, i) => (
             <Reveal as="li" key={title} delay={i * 0.08} className="relative flex gap-5 md:flex-col md:gap-0">
-              <span className="relative z-10 grid size-12 shrink-0 place-items-center rounded-2xl bg-surface text-brand-600 shadow-[var(--shadow-ring),var(--shadow-sm)]">
+              <span className="relative z-10 grid size-12 shrink-0 place-items-center rounded-2xl bg-surface text-brand-600 shadow-[var(--shadow-card)] transition-[box-shadow] duration-[var(--duration-ui)] hover:shadow-[var(--shadow-card-hover)]">
                 <Icon className="size-5" aria-hidden />
               </span>
               <div className="md:mt-6">
@@ -347,7 +347,7 @@ export function FAQ() {
 
         <div className="mt-12 space-y-3">
           {FAQ_ITEMS.map(({ q, a }, i) => (
-            <Reveal key={q} as="article" delay={i * 0.05} className="rounded-[var(--radius-xl)] bg-surface shadow-[var(--shadow-ring),var(--shadow-sm)]">
+            <Reveal key={q} as="article" delay={i * 0.05} className="rounded-[var(--radius-xl)] bg-surface shadow-[var(--shadow-card)] transition-[box-shadow] duration-[var(--duration-ui)] hover:shadow-[var(--shadow-card-hover)]">
               <details className="group">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 text-left">
                   <span className="text-base font-semibold tracking-tight text-ink">{q}</span>
@@ -391,7 +391,7 @@ export function Impact() {
         <ul className="grid gap-4">
           {PRINCIPLES.map(({ Icon, title, text }, i) => (
             <Reveal as="li" key={title} delay={i * 0.07}>
-              <div className="flex gap-5 rounded-[var(--radius-xl)] bg-surface p-6 shadow-[var(--shadow-ring),var(--shadow-xs)]">
+              <div className="flex gap-5 rounded-[var(--radius-xl)] bg-surface p-6 shadow-[var(--shadow-card)] ring-1 ring-inset ring-line transition-[box-shadow] duration-[var(--duration-ui)] hover:shadow-[var(--shadow-card-hover)]">
                 <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-inset ring-brand-100">
                   <Icon className="size-5" aria-hidden />
                 </span>
@@ -436,7 +436,7 @@ export function About() {
 
         <Reveal delay={0.06} className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {METRICS.map(({ label, value, icon: Icon }) => (
-            <div key={label} className="rounded-[var(--radius-xl)] bg-white p-6 shadow-[var(--shadow-ring),var(--shadow-sm)] ring-1 ring-inset ring-line">
+            <div key={label} className="rounded-[var(--radius-xl)] bg-white p-6 shadow-[var(--shadow-card)] transition-[box-shadow] duration-[var(--duration-ui)] hover:shadow-[var(--shadow-card-hover)] ring-1 ring-inset ring-line">
               <Icon className="size-6 text-brand-600" aria-hidden />
               <p className="mt-4 text-3xl font-semibold tracking-tight tabular-nums text-ink">{value}</p>
               <p className="mt-1 text-sm text-muted">{label}</p>
@@ -459,7 +459,7 @@ export function About() {
                   key={label}
                   href={href}
                   target="_blank"
-                  rel="noopener noreferrer"
+                  rel="noopener noreferrer nofollow"
                   className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm font-medium text-brand-100 hover:bg-white/20 transition-colors ring-1 ring-inset ring-white/10"
                 >
                   <Icon className="size-4" aria-hidden />

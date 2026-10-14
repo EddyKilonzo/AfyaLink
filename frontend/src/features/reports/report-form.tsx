@@ -23,6 +23,7 @@ import {
   Textarea,
 } from "@/components/ui";
 import { cx } from "@/components/ui/cx";
+import { LocationPicker } from "./location-picker";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/features/auth/auth-context";
 import { useLocations } from "@/features/locations/hooks";
@@ -417,6 +418,20 @@ export function ReportForm({ report }: { report?: ServerReport } = {}) {
               </div>
               {locationError && <p className="mt-2 text-[0.8125rem] text-amber-ink">{locationError}</p>}
               <FieldError id="latitude-error" message={errors.latitude?.message} />
+            </div>
+
+            {/* Pin the location on a map. Tap anywhere on the map to move the pin. */}
+            <div>
+              <p className="mb-2 text-sm font-semibold text-ink">Pin on map</p>
+              <LocationPicker
+                latitude={latitude}
+                longitude={longitude}
+                onPick={(lat, lng) => {
+                  setValue("latitude", lat, { shouldDirty: true });
+                  setValue("longitude", lng, { shouldDirty: true });
+                }}
+              />
+              <p className="mt-2 text-[0.8125rem] text-muted">Tap the map to drop a pin. Drag the pin to fine-tune.</p>
             </div>
           </FormSection>
 

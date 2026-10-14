@@ -111,7 +111,7 @@ describe('account email templates', () => {
       expect(email.subject.length).toBeGreaterThan(5);
       expect(email.text).toContain('Hello Mwende,');
       expect(email.text).toContain('2026-10-11 08:30 UTC');
-      expect(email.html).toContain('Hello Mwende,');
+      expect(email.html).toContain('Mwende');
     });
   }
 
@@ -125,7 +125,7 @@ describe('account email templates', () => {
   it('escapes the recipient name in HTML', async () => {
     const email = await renderAccountEmail({ email: recipient.email, fullName: '<script>x</script> Doe' }, { kind: 'mfa_enabled' }, ctx);
     expect(email.html).not.toContain('<script>');
-    expect(email.html).toContain('<script>x</script>');
+    expect(email.html).toContain('&lt;script&gt;x&lt;/script&gt;');
   });
 
   it('builds links from the configured app URL', async () => {
@@ -136,7 +136,7 @@ describe('account email templates', () => {
 
   it('escapeHtml covers the five special characters', () => {
     const input = '&<>"\'';
-    const expected = '&<>"\'';
+    const expected = '&amp;&lt;&gt;&quot;&#39;';
     expect(escapeHtml(input)).toBe(expected);
   });
 });

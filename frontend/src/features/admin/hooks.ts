@@ -3,10 +3,12 @@
 import { useAsync } from "@/hooks/use-async";
 import { useMutation } from "@/hooks/use-mutation";
 import { saveFile } from "@/lib/api";
+import { openPrintablePdf } from "@/lib/pdf-generator";
 import { auditService, type AuditFilters } from "@/services/audit.service";
 import { reportsService, type ReportFilters } from "@/services/reports.service";
 import { syncService, type SyncLogFilters } from "@/services/sync.service";
 import { usersService, type CreateUserInput, type UpdateUserInput, type UserFilters } from "@/services/users.service";
+import { CATEGORY_LABELS, type ServerReport } from "@/types";
 
 // Every call here is ADMIN-only on the server; these hooks add no access control of their own.
 
@@ -59,5 +61,46 @@ export function useExportReports() {
     const file = await reportsService.exportCsv(filters);
     saveFile(file);
     return file.filename;
+  });
+}
+
+/** Opens a branded PDF print window for the whole export (forest-green header,
+ * consistent shadows). Zero dependencies: the browser prints a styled page and
+ * the user saves it as PDF from the OS print dialog. */
+export function useExportReportsPdf() {
+  return useMutation(async (filters: Omit<ReportFilters, "page" | "limit">, actor: { fullName: string; role: string }) => {
+    const reports = await reportsService.list({ ...filters, limit: 10_000 });
+    const stamp = new Date().toISOString().slice(0, 10);
+    openPrintablePdf(
+      {
+        title: `AfyaLink reports — ${stamp}`,
+        subtitle: `${reports.items.length} report(s), last ${filters.to ? "to " + filters.to : "all"}`,
+        generatedAt: new Date().toISOString(),
+        generatedBy: actor.fullName,
+        role: actor.role,
+      },
+      [
+        {
+          heading: "Summary",
+          rows: [
+            { label: "Total reports", value: reports.items.length.toLocaleString() },
+            { label: "From", value: filters.from || "—" },
+            { label: "To", value: filters.to || "—" },
+            { label: "Category", value: filters.category || "All" },
+            { label: "Severity", value: filters.severity || "All" },
+            { label: "Status", value: filters.status || "All" },
+          ],
+        },
+        {
+          heading: `Reports (${reports.items.length})`,
+          rows: reports.items.map((r: ServerReport) => ({
+            label: r.conditionName,
+            value: `${CATEGORY_LABELS[r.category]} · ${r.severity} · ${r.status} · ${r.casesCount} case(s)`,
+          })),
+        },
+      ],
+      `afyalink-reports-${stamp}.pdf`,
+    );
+    return `afyalink-reports-${stamp}.pdf`;
   });
 }
