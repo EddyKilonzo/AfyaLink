@@ -1,8 +1,6 @@
 "use client";
 
-import { AlertCircle, Check, CheckCircle, ChevronDown, Eye, EyeOff, Loader2, Mail, MapPin, Phone, Save, Shield, User, X, XCircle } from "lucide-react";
 import { Form, FieldArray, FloatingLabelInput, FloatingLabelSelect, FloatingLabelTextarea, Checkbox, RadioGroup, FormSection } from "@/components/ui/form";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/surface";
 
 function basicValidate(data: FormData) {
@@ -226,7 +224,7 @@ export default function FormsDemoPage() {
                 maxItems={10}
                 addLabel="Add symptom"
               >
-                {(index, remove) => (
+                {(index) => (
                   <div className="grid gap-4 md:grid-cols-3 w-full">
                     <FloatingLabelInput
                       name={`symptoms[${index}].name`}
@@ -259,7 +257,7 @@ export default function FormsDemoPage() {
                 maxItems={5}
                 addLabel="Add attachment"
               >
-                {(index, remove) => (
+                {(index) => (
                   <div className="grid gap-4 md:grid-cols-[1fr_auto] w-full items-end">
                     <FloatingLabelInput
                       name={`attachments[${index}].url`}
