@@ -1,0 +1,46 @@
+# Render Blueprint for the AfyaLink API (NestJS). The frontend deploys to
+# Vercel (see vercel.json) and is never built here.
+#
+# rootDir keeps Render out of the monorepo root: the root package.json has a
+# postinstall that installs the frontend and a build script that runs
+# `next build`, which crashes on /_global-error when NODE_ENV is not production.
+services:
+  - type: web
+    name: afyalink-backend
+    runtime: node
+    # Omitted plan = Render's default for new services; set `plan: free` if wanted.
+    rootDir: backend
+    # No committed lockfile, so `npm install`, not `npm ci`. --include=dev because
+    # NODE_ENV=production would otherwise skip @nestjs/cli and typescript. npm is
+    # pinned: the npm 10 bundled with Node 22 crashes on fresh installs (edgesOut).
+    buildCommand: npx -y npm@11.20.0 install --include=dev --no-audit --no-fund && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 22.15.0
+      # Render terminates TLS one proxy hop in front of the app: needed for
+      # correct client IPs (rate limiting) and secure session cookies.
+      - key: TRUST_PROXY
+        value: "1"
+      - key: SESSION_SECRET
+        generateValue: true
+      # Required in production: 32 bytes as 64 hex chars or base64, e.g.
+      #   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+      # Keep it stable or existing two-factor secrets become unreadable.
+      - key: MFA_ENCRYPTION_KEY
+        sync: false
+      # postgresql://… (Neon) or mysql://…
+      - key: DATABASE_URL
+        sync: false
+      # The deployed frontend, e.g. https://afyalink.vercel.app (https only in production).
+      - key: FRONTEND_ORIGIN
+        sync: false
+      - key: APP_URL
+        sync: false
+      # smtp | log | none. smtp also needs SMTP_HOST/PORT/USER/PASSWORD and MAIL_FROM.
+      - key: MAIL_TRANSPORT
+        sync: false
