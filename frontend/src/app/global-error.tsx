@@ -1,9 +1,14 @@
 "use client";
 
-import Link from "next/link";
 import { Button, Panel, PanelHeader } from "@/components/ui";
 import { Logo } from "@/components/brand/logo";
 
+/**
+ * Global error boundary. Deliberately dependency-free:
+ *  - no `next/link` (the router context is null here, so Link throws
+ *    "Cannot read properties of null (reading 'useContext')" during prerender);
+ *  - no providers, no hooks, so it can render even when the app itself failed.
+ */
 export default function GlobalError({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
   return (
     <html lang="en">
@@ -14,9 +19,9 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
       </head>
       <body>
         <main style={{ maxWidth: 420, margin: "20vh auto", padding: 16, textAlign: "center" }}>
-          <Link href="/" className="relative inline-flex mb-6" aria-label="AfyaLink home">
+          <a href="/" className="relative inline-flex mb-6" aria-label="AfyaLink home">
             <Logo />
-          </Link>
+          </a>
           <Panel>
             <PanelHeader title="AfyaLink could not load" description="The application failed to initialize. Your reports saved on this device are safe." />
             <div className="px-5 pb-5 pt-4 sm:px-6">

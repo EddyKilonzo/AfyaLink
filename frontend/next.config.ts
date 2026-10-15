@@ -31,13 +31,18 @@ try {
   console.warn(`[AfyaLink] NEXT_PUBLIC_API_URL "${apiUrl}" is not a valid URL; using ${apiOrigin}.`);
 }
 
-// Next.js injects inline bootstrap scripts, so 'unsafe-inline' is needed for
-// scripts unless nonce-based CSP (dynamic rendering via proxy.ts) is adopted.
+/**
+ * Content-Security-Policy. Next.js App Router injects inline bootstrap scripts,
+ * so `script-src` keeps `'unsafe-inline'`; `strict-dynamic` is the W3C-recommended
+ * mitigation — any script that already loaded from `'self'` can load more
+ * scripts, while inline event handlers and `javascript:` URLs still cannot.
+ * The other directives are fully restrictive.
+ */
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://*.tile.openstreetmap.org",
+  "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://res.cloudinary.com",
   "font-src 'self'",
   `connect-src 'self' ${apiOrigin}${isDev ? " ws://localhost:* ws://127.0.0.1:*" : ""}`,
   "worker-src 'self'",
