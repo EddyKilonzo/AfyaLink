@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2, CircleAlert, Clock, CloudOff, History, RefreshCw, RotateCcw, Server, Smartphone, Trash2, UploadCloud } from "lucide-react";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { useState, type ReactNode } from "react";
 import { AsyncBoundary } from "@/components/async-boundary";
 import { EASE_OUT, Stagger, StaggerItem } from "@/components/motion";
@@ -132,6 +132,7 @@ function Node({ icon, title, value, sub, tone }: { icon: ReactNode; title: strin
 /** The link between device and server; moving dots only while an upload is really running. */
 function Connector({ state }: { state: "offline" | "active" | "idle" }) {
   const label = state === "offline" ? "No connection" : state === "active" ? "Uploading" : "Connected";
+  const reduced = useReducedMotion();
   return (
     <div className="flex w-12 flex-col items-center gap-2 sm:w-28" role="img" aria-label={label}>
       <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-line">
@@ -143,8 +144,8 @@ function Connector({ state }: { state: "offline" | "active" | "idle" }) {
               key={i}
               className="absolute top-0 h-full w-1/3 rounded-full bg-brand-500"
               initial={{ x: "-100%" }}
-              animate={{ x: "300%" }}
-              transition={{ duration: 1.4, ease: "easeInOut", repeat: Infinity, delay: i * 0.45 }}
+              animate={reduced ? { x: "0" } : { x: "300%" }}
+              transition={reduced ? { duration: 0 } : { duration: 1.4, ease: "easeInOut", repeat: Infinity, delay: i * 0.45 }}
             />
           ))}
       </div>

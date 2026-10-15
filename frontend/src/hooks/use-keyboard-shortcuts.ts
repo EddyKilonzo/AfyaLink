@@ -6,6 +6,8 @@ interface ShortcutConfig {
   keys: string[];
   description: string;
   action: () => void;
+  /** "global" matches everywhere; "input" matches while the focus is in a
+   *  text field (useful for e.g. submit-on-enter). Defaults to "global". */
   scope?: "global" | "input";
 }
 
@@ -14,6 +16,9 @@ interface ShortcutConfig {
  * combination (case-insensitive, order-independent). Shortcuts are ignored
  * while typing in text inputs, textareas, or contenteditable elements unless
  * `scope: "input"` is set.
+ *
+ * Modifiers are normalized across platforms: Ctrl on Windows/Linux and Cmd on
+ * macOS both resolve to `"mod"`, so `["mod", "k"]` works on either.
  */
 export function useKeyboardShortcuts(shortcuts: ShortcutConfig[], deps: DependencyList = []) {
   useEffect(() => {
@@ -24,17 +29,23 @@ export function useKeyboardShortcuts(shortcuts: ShortcutConfig[], deps: Dependen
       return tag === "input" || tag === "textarea" || tag === "select" || isEditable;
     }
 
+    function normalizeCombo(e: KeyboardEvent): string {
+      const parts: string[] = [];
+      // Cross-platform: Ctrl on Windows/Linux and Cmd on macOS both mean "mod".
+      if (e.ctrlKey || e.metaKey) parts.push("mod");
+      if (e.shiftKey) parts.push("shift");
+      if (e.altKey) parts.push("alt");
+      parts.push(e.key.toLowerCase());
+      return parts.sort().join("+");
+    }
+
     function handler(e: KeyboardEvent) {
       if (isTyping(document.activeElement)) {
         const allow = shortcuts.find((s) => s.scope === "input");
         if (!allow) return;
       }
 
-      const combo = [e.ctrlKey ? "ctrl" : "", e.shiftKey ? "shift" : "", e.altKey ? "alt" : "", e.metaKey ? "meta" : "", e.key.toLowerCase()]
-        .filter(Boolean)
-        .sort()
-        .join("+");
-
+      const combo = normalizeCombo(e);
       const match = shortcuts.find((s) => s.keys.map((k) => k.toLowerCase()).sort().join("+") === combo);
       if (match) {
         e.preventDefault();

@@ -92,7 +92,7 @@ function ShellFrame({ children }: { children: ReactNode }) {
       {/* Tablet/desktop sidebar: full, or a compact rail when collapsed */}
       <aside
         id="app-sidebar"
-        className="sticky top-0 z-20 hidden h-dvh flex-col overflow-hidden border-r border-line bg-surface shadow-[4px_0_24px_-16px_rgb(11_61_53/0.18)] md:flex"
+        className="sticky top-0 z-20 hidden h-dvh flex-col overflow-hidden border-r border-line bg-surface shadow-[var(--shadow-xl)] md:flex"
       >
         <div className={cx("flex h-16 shrink-0 items-center", collapsed ? "justify-center px-2" : "justify-between pl-5 pr-3")}>
           <Link href={home} aria-label="AfyaLink home" className={cx(collapsed && "hidden")}>
@@ -335,7 +335,7 @@ function UserMenu() {
       >
         {/* Dock: lifted, rounded, with a soft contact shadow */}
         <div className="mx-auto mb-3 w-[calc(100%-2rem)] max-w-md">
-          <div className="flex items-center justify-between gap-1 rounded-[22px] border border-line/80 bg-surface/92 p-1.5 shadow-[var(--shadow-xl)] backdrop-blur-xl backdrop-saturate-150">
+          <div className="flex items-center justify-between gap-1 rounded-[var(--radius-2xl)] border border-line/80 bg-surface/92 p-1.5 shadow-[var(--shadow-xl)] backdrop-blur-xl backdrop-saturate-150">
             {tabs.map((item) => {
               const active = item.match(pathname);
               if (item.primary) {
