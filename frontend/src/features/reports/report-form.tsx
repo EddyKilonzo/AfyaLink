@@ -11,16 +11,14 @@ import { EASE_OUT } from "@/components/motion";
 import {
   Button,
   ButtonLink,
-  describedBy,
   ErrorState,
-  Field,
   FieldError,
+  FloatingLabelInput,
+  FloatingLabelSelect,
+  FloatingLabelTextarea,
   FormSection,
-  Input,
   Panel,
-  Select,
   StatusIndicator,
-  Textarea,
 } from "@/components/ui";
 import { cx } from "@/components/ui/cx";
 import { LocationPicker } from "./location-picker";
@@ -125,7 +123,7 @@ export function ReportForm({ report }: { report?: ServerReport } = {}) {
   });
 
   const values = useWatch({ control });
-  const { category, severity, latitude, longitude, notes } = values;
+  const { category, severity, latitude, longitude, notes, symptoms } = values;
 
   // Restore an unfinished draft from this device (create mode only).
   useEffect(() => {
@@ -291,22 +289,22 @@ export function ReportForm({ report }: { report?: ServerReport } = {}) {
               <FieldError id="category-error" message={errors.category?.message} />
             </fieldset>
 
-            <Field name="conditionName" label="Condition or issue" required error={errors.conditionName?.message} hint="Pick a suggestion or type your own.">
-              <Input
-                id="conditionName"
-                list="condition-suggestions"
-                autoComplete="off"
-                placeholder="e.g. Malaria"
-                {...register("conditionName")}
-                aria-invalid={!!errors.conditionName}
-                aria-describedby={describedBy("conditionName", errors.conditionName?.message, true)}
-              />
-              <datalist id="condition-suggestions">
-                {CONDITION_SUGGESTIONS.map((s) => (
-                  <option key={s} value={s} />
-                ))}
-              </datalist>
-            </Field>
+            <FloatingLabelInput
+              label="Condition or issue"
+              required
+              error={errors.conditionName?.message}
+              hint="Pick a suggestion or type your own."
+              characterCount={120}
+              list="condition-suggestions"
+              autoComplete="off"
+              placeholder=" "
+              {...register("conditionName")}
+            />
+            <datalist id="condition-suggestions">
+              {CONDITION_SUGGESTIONS.map((s) => (
+                <option key={s} value={s} />
+              ))}
+            </datalist>
           </FormSection>
 
           <FormSection title="How serious is it?">
@@ -336,8 +334,12 @@ export function ReportForm({ report }: { report?: ServerReport } = {}) {
             </fieldset>
 
             <div className="grid gap-5 sm:grid-cols-2">
-              <Field name="casesCount" label="Number of cases" required error={errors.casesCount?.message}>
-                <div className="mt-1.5 flex items-stretch overflow-hidden rounded-[10px] border border-line-strong bg-surface shadow-xs focus-within:border-brand-500 focus-within:shadow-[var(--shadow-glow)]">
+              <div className="space-y-1.5">
+                <label htmlFor="casesCount" className="flex items-baseline gap-1 text-sm font-semibold text-ink">
+                  Number of cases
+                  <span className="text-error" aria-hidden>*</span>
+                </label>
+                <div className="flex items-stretch overflow-hidden rounded-[10px] border border-line-strong bg-surface shadow-xs transition-[border-color,box-shadow] duration-[var(--duration-micro)] ease-[var(--ease-emphasize)] has-[:focus-within]:border-brand-500 has-[:focus-within]:shadow-[var(--shadow-glow)] has-[:focus-within]:-translate-y-[0.5px] has-[:disabled]:cursor-not-allowed has-[:disabled]:bg-sunken has-[:disabled]:text-muted">
                   <button type="button" onClick={() => stepCases(-1)} className="grid w-12 place-items-center text-muted transition-colors hover:bg-sunken hover:text-ink" aria-label="One fewer case">
                     <Minus className="size-4" aria-hidden />
                   </button>
@@ -349,47 +351,50 @@ export function ReportForm({ report }: { report?: ServerReport } = {}) {
                     {...register("casesCount")}
                     className="min-h-12 w-full border-x border-line bg-transparent text-center text-base font-semibold tabular-nums text-ink focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
                     aria-invalid={!!errors.casesCount}
-                    aria-describedby={describedBy("casesCount", errors.casesCount?.message)}
+                    aria-describedby={errors.casesCount ? "casesCount-error" : undefined}
+                    placeholder=" "
                   />
                   <button type="button" onClick={() => stepCases(1)} className="grid w-12 place-items-center text-muted transition-colors hover:bg-sunken hover:text-ink" aria-label="One more case">
                     <Plus className="size-4" aria-hidden />
                   </button>
                 </div>
-              </Field>
-              <Field name="ageGroup" label="Age group" required>
-                <Select id="ageGroup" {...register("ageGroup")}>
-                  {AGE_GROUPS.map((a) => (
-                    <option key={a} value={a}>
-                      {AGE_GROUP_LABELS[a]}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            </div>
-          </FormSection>
-
-          <FormSection title="When and where">
-            <div className="grid gap-5 sm:grid-cols-2">
-              <Field name="observedAt" label="Observed at" required error={errors.observedAt?.message}>
-                <Input
-                  id="observedAt"
-                  type="datetime-local"
-                  max={localDateTimeNow()}
-                  {...register("observedAt")}
-                  aria-invalid={!!errors.observedAt}
-                  aria-describedby={describedBy("observedAt", errors.observedAt?.message)}
-                />
-              </Field>
-              <Field name="locationId" label="Area" optional error={errors.locationId?.message} hint={locations.error && !locations.data ? "Areas couldn't load. You can still save." : undefined}>
-                <Select id="locationId" {...register("locationId")} disabled={!locations.data} aria-invalid={!!errors.locationId}>
-                  <option value="">{locations.loading && !locations.data ? "Loading areas…" : "Not specified"}</option>
-                  {locations.data?.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {formatLocation(l)}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
+                <FieldError id="casesCount-error" message={errors.casesCount?.message} />
+              </div>
+              <FloatingLabelSelect
+                label="Age group"
+                required
+                error={errors.ageGroup?.message}
+                {...register("ageGroup")}
+              >
+                {AGE_GROUPS.map((a) => (
+                  <option key={a} value={a}>
+                    {AGE_GROUP_LABELS[a]}
+                  </option>
+                ))}
+              </FloatingLabelSelect>
+              <FloatingLabelInput
+                label="Observed at"
+                required
+                error={errors.observedAt?.message}
+                type="datetime-local"
+                max={localDateTimeNow()}
+                placeholder=" "
+                {...register("observedAt")}
+              />
+              <FloatingLabelSelect
+                label="Area"
+                error={errors.locationId?.message}
+                hint={locations.error && !locations.data ? "Areas couldn't load. You can still save." : undefined}
+                disabled={!locations.data}
+                {...register("locationId")}
+              >
+                <option value="">{locations.loading && !locations.data ? "Loading areas…" : "Not specified"}</option>
+                {locations.data?.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {formatLocation(l)}
+                  </option>
+                ))}
+              </FloatingLabelSelect>
             </div>
 
             <div className="rounded-2xl bg-sunken p-4">
@@ -435,18 +440,35 @@ export function ReportForm({ report }: { report?: ServerReport } = {}) {
             </div>
           </FormSection>
 
-          <FormSection title="Details" description="Optional, but helpful for whoever reviews the report.">
-            <Field name="symptoms" label="Symptoms" optional hint="Separate with commas, e.g. fever, cough" error={errors.symptoms?.message}>
-              <Input id="symptoms" placeholder="fever, cough" {...register("symptoms")} aria-describedby={describedBy("symptoms", errors.symptoms?.message, true)} />
-            </Field>
-            <Field name="notes" label="Notes" optional error={errors.notes?.message}>
-              <Textarea id="notes" rows={3} maxLength={2000} {...register("notes")} aria-describedby="notes-privacy" />
-              <p id="notes-privacy" className="mt-1.5 flex items-start gap-1.5 text-[0.8125rem] text-muted">
-                <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-brand-600" aria-hidden />
-                Don&apos;t include names, phone numbers or ID numbers.
-                <span className="ml-auto shrink-0 tabular-nums">{(notes ?? "").length}/2000</span>
-              </p>
-            </Field>
+<FormSection title="Details" description="Optional, but helpful for whoever reviews the report.">
+            <FloatingLabelInput
+              label="Symptoms"
+              optional
+              hint="Separate with commas, e.g. fever, cough"
+              error={errors.symptoms?.message}
+              characterCount={600}
+              placeholder=" "
+              {...register("symptoms")}
+            />
+            <p id="notes-privacy" className="mt-1.5 flex items-start gap-1.5 text-[0.8125rem] text-muted">
+              <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-brand-600" aria-hidden />
+              Don&apos;t include names, phone numbers or ID numbers.
+              <span className="ml-auto shrink-0 tabular-nums">{(symptoms ?? "").length}/600</span>
+            </p>
+            <FloatingLabelTextarea
+              label="Notes"
+              optional
+              error={errors.notes?.message}
+              characterCount={2000}
+              rows={3}
+              placeholder=" "
+              {...register("notes")}
+            />
+            <p id="notes-privacy-2" className="mt-1.5 flex items-start gap-1.5 text-[0.8125rem] text-muted">
+              <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-brand-600" aria-hidden />
+              Don&apos;t include names, phone numbers or ID numbers.
+              <span className="ml-auto shrink-0 tabular-nums">{(notes ?? "").length}/2000</span>
+            </p>
           </FormSection>
         </div>
       </Panel>

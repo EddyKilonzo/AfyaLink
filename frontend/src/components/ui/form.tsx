@@ -558,6 +558,7 @@ export function FloatingLabelField({
   hint,
   error,
   required,
+  optional,
   children,
   className,
   showSuccess = false,
@@ -567,6 +568,7 @@ export function FloatingLabelField({
   hint?: ReactNode;
   error?: string;
   required?: boolean;
+  optional?: boolean;
   children: ReactNode;
   className?: string;
   showSuccess?: boolean;
@@ -599,6 +601,7 @@ export function FloatingLabelField({
       >
         {label}
         {required && <span className="text-error" aria-hidden>*</span>}
+        {optional && <span className="ml-1 text-[0.75rem] font-normal text-muted">Optional</span>}
       </label>
       {hint && !error && <FieldHint id={getHintId(name)}>{hint}</FieldHint>}
       <FieldError id={getErrorId(name)} message={error} />
@@ -612,15 +615,17 @@ export function FloatingLabelInput({
   hint,
   error,
   required,
+  optional,
   characterCount,
   showSuccess = false,
   ...props
-}: InputProps & { label: string; hint?: ReactNode; error?: string; required?: boolean; showSuccess?: boolean } & { name: string }) {
+}: InputProps & { label: string; hint?: ReactNode; error?: string; required?: boolean; optional?: boolean; showSuccess?: boolean } & { name: string }) {
   const describedById = error ? getErrorId(name) : hint ? getHintId(name) : "";
   return (
-    <FloatingLabelField name={name} label={label} hint={hint} error={error} required={required} showSuccess={showSuccess}>
+    <FloatingLabelField name={name} label={label} hint={hint} error={error} required={required} optional={optional} showSuccess={showSuccess}>
       <input
         id={name}
+        name={name}
         {...props}
         className={cx(CONTROL, "mt-0 min-h-12 pt-6 pb-2 px-3.5", error ? "border-error" : undefined, props.className)}
         aria-invalid={!!error}
@@ -648,13 +653,14 @@ export function FloatingLabelTextarea({
   hint,
   error,
   required,
+  optional,
   characterCount,
   showSuccess = false,
   ...props
-}: TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string; hint?: ReactNode; error?: string; required?: boolean; characterCount?: number; showSuccess?: boolean } & { name: string }) {
+}: TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string; hint?: ReactNode; error?: string; required?: boolean; optional?: boolean; characterCount?: number; showSuccess?: boolean } & { name: string }) {
   const describedById = error ? getErrorId(name) : hint ? getHintId(name) : "";
   return (
-    <FloatingLabelField name={name} label={label} hint={hint} error={error} required={required} showSuccess={showSuccess}>
+    <FloatingLabelField name={name} label={label} hint={hint} error={error} required={required} optional={optional} showSuccess={showSuccess}>
       <textarea
         id={name}
         {...props}
@@ -684,13 +690,14 @@ export function FloatingLabelSelect({
   hint,
   error,
   required,
+  optional,
   children,
   showSuccess = false,
   ...props
-}: SelectHTMLAttributes<HTMLSelectElement> & { label: string; hint?: ReactNode; error?: string; required?: boolean; showSuccess?: boolean } & { name: string }) {
+}: SelectHTMLAttributes<HTMLSelectElement> & { label: string; hint?: ReactNode; error?: string; required?: boolean; optional?: boolean; showSuccess?: boolean } & { name: string }) {
   const describedById = error ? getErrorId(name) : hint ? getHintId(name) : "";
   return (
-    <FloatingLabelField name={name} label={label} hint={hint} error={error} required={required} showSuccess={showSuccess}>
+    <FloatingLabelField name={name} label={label} hint={hint} error={error} required={required} optional={optional} showSuccess={showSuccess}>
       <div className="relative mt-0">
         <select
           id={name}
@@ -699,9 +706,6 @@ export function FloatingLabelSelect({
           aria-invalid={!!error}
           aria-describedby={describedById}
         >
-          <option value="" disabled>
-            {" "}
-          </option>
           {children}
         </select>
         <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden />

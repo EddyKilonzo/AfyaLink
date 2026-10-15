@@ -22,13 +22,18 @@ const RETRY_INTERVAL_MS = 15_000;
 @Injectable()
 export class DatabaseService implements OnApplicationBootstrap, OnApplicationShutdown {
   private readonly logger = new Logger(DatabaseService.name);
-  private state: DatabaseState = 'connecting';
+  private state: DatabaseState;
   private retryTimer: NodeJS.Timeout | null = null;
 
   constructor(
     private readonly dataSource: DataSource,
     private readonly config: ConfigService<AppConfig, true>,
-  ) {}
+  ) {
+    // State is derived from `dataSource.isInitialized` (see `status`), so it can
+    // never be stale relative to the real connection. The initial value here is
+    // only a hint before the bootstrap hook runs.
+    this.state = this.dataSource.isInitialized ? 'connected' : 'not_configured';
+  }
 
   onApplicationBootstrap(): void {
     const db = this.config.get('db', { infer: true });
@@ -53,6 +58,9 @@ export class DatabaseService implements OnApplicationBootstrap, OnApplicationShu
   }
 
   get status(): DatabaseState {
+    // Derived from the real connection rather than a stale flag, so the health
+    // endpoint can never report "connecting" after the constructor has run.
+    if (this.dataSource.isInitialized) return 'connected';
     return this.state;
   }
 
@@ -72,12 +80,13 @@ export class DatabaseService implements OnApplicationBootstrap, OnApplicationShu
 
   private async connect(): Promise<void> {
     try {
-      this.state = 'connecting';
       await this.dataSource.initialize();
       this.state = 'connected';
       const dialect = this.config.get('db.dialect', { infer: true });
       this.logger.log(`Connected to ${dialect === 'postgres' ? 'PostgreSQL' : 'MySQL'}.`);
     } catch (error) {
+      // `dataSource.isInitialized` is still false, so `status` reports
+      // 'unavailable' and the next retry will try again.
       this.state = 'unavailable';
       // Log only the driver error code; messages can echo connection details.
       const code = (error as { code?: string }).code ?? 'UNKNOWN';
