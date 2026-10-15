@@ -27,8 +27,11 @@ export interface PdfSection {
 export function openPrintablePdf(meta: PdfMeta, sections: PdfSection[], filename?: string): void {
   if (typeof window === "undefined") return;
 
-  const win = window.open("", "_blank", "noopener,noreferrer");
+  // No "noopener" feature here: with it, window.open() always returns null and
+  // we could not write the document. Sever the back-reference by hand instead.
+  const win = window.open("", "_blank");
   if (!win) return;
+  win.opener = null;
 
   const rows = sections
     .map(
@@ -54,19 +57,18 @@ export function openPrintablePdf(meta: PdfMeta, sections: PdfSection[], filename
     --color-ink: #172522;
     --color-muted: #687873;
     --color-line: #e3eae6;
-    --color-brand-900: #0b3d2e;
+    --color-brand-900: #0b3d35;
     --color-brand-600: #146c5a;
-    --color-brand-50: #eef9f3;
-    --color-text-muted: #8a9793;
+    --radius-lg: 12px;
     --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
   @page { margin: 18mm 16mm; }
   body { font-family: var(--font-sans); color: var(--color-ink); background: var(--color-canvas); }
-  .brand-bar { background: linear-gradient(135deg, var(--color-brand-900) 0%, var(--color-brand-600) 100%); color: #fff; padding: 18px 22px; border-radius: 10px; }
+  .brand-bar { background: linear-gradient(135deg, var(--color-brand-900) 0%, var(--color-brand-600) 100%); color: var(--color-surface); padding: 18px 22px; border-radius: var(--radius-lg); }
   .brand-bar h1 { margin: 0; font-size: 20px; font-weight: 700; }
   .brand-bar p { margin: 4px 0 0; font-size: 12px; opacity: .85; }
   .meta { display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; margin: 14px 0 4px; font-size: 11px; color:var(--color-muted); }
-  .footer { margin-top: 24px; padding-top: 10px; border-top: 1px solid var(--color-line); font-size: 10px; color:var(--color-text-muted); }
+  .footer { margin-top: 24px; padding-top: 10px; border-top: 1px solid var(--color-line); font-size: 10px; color:var(--color-muted); }
 </style></head><body>
   <div class="brand-bar">
     <h1>AfyaLink</h1>

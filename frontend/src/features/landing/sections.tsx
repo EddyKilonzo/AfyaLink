@@ -140,11 +140,11 @@ export function Features() {
 
 function HeatIllustration() {
   const blobs = [
-    { x: 30, y: 58, r: 34, c: "#c43d4b", o: 0.55 },
-    { x: 34, y: 54, r: 52, c: "#f3b66a", o: 0.5 },
-    { x: 70, y: 40, r: 30, c: "#1d8a70", o: 0.55 },
-    { x: 58, y: 70, r: 22, c: "#80cfb1", o: 0.6 },
-    { x: 84, y: 66, r: 18, c: "#80cfb1", o: 0.5 },
+    { x: 30, y: 58, r: 34, c: "var(--color-error)", o: 0.55 },
+    { x: 34, y: 54, r: 52, c: "var(--color-amber)", o: 0.5 },
+    { x: 70, y: 40, r: 30, c: "var(--color-brand-500)", o: 0.55 },
+    { x: 58, y: 70, r: 22, c: "var(--color-brand-300)", o: 0.6 },
+    { x: 84, y: 66, r: 18, c: "var(--color-brand-300)", o: 0.5 },
   ];
   return (
     <div className="relative mt-6 h-40 overflow-hidden rounded-2xl bg-sunken ring-1 ring-inset ring-line" aria-hidden>
@@ -154,8 +154,8 @@ function HeatIllustration() {
             <feGaussianBlur stdDeviation="5" />
           </filter>
         </defs>
-        <path d="M0 30 Q 30 20 50 35 T 100 28" stroke="#cfdad4" strokeWidth="0.6" fill="none" vectorEffect="non-scaling-stroke" />
-        <path d="M0 75 Q 40 62 60 80 T 100 70" stroke="#cfdad4" strokeWidth="0.6" fill="none" vectorEffect="non-scaling-stroke" />
+        <path d="M0 30 Q 30 20 50 35 T 100 28" stroke="var(--color-line-strong)" strokeWidth="0.6" fill="none" vectorEffect="non-scaling-stroke" />
+        <path d="M0 75 Q 40 62 60 80 T 100 70" stroke="var(--color-line-strong)" strokeWidth="0.6" fill="none" vectorEffect="non-scaling-stroke" />
         <g filter="url(#heat-blur)">
           {blobs.map((b, i) => (
             <ellipse key={i} cx={b.x} cy={b.y} rx={b.r / 2} ry={b.r / 2.6} fill={b.c} opacity={b.o} />
@@ -194,11 +194,11 @@ export function HowItWorks() {
           <span className="absolute bottom-6 left-[1.4375rem] top-6 w-px bg-brand-200 md:hidden" aria-hidden />
           <span className="absolute left-6 right-6 top-[1.4375rem] hidden h-px bg-line-strong md:block" aria-hidden />
           <svg preserveAspectRatio="none" aria-hidden className="pointer-events-none absolute left-6 right-6 top-[1.4375rem] hidden h-px md:block">
-            <line x1="0" y1="0" x2="100%" y2="0" stroke="rgb(20 108 90 / 0.7)" strokeWidth="2" pathLength="1" strokeDasharray="1" strokeDashoffset="1" style={{ animation: "border-draw 1.6s var(--ease-out) 120ms forwards" }} />
+            <line x1="0" y1="0" x2="100%" y2="0" stroke="var(--color-brand-600)" strokeOpacity="0.7" strokeWidth="2" pathLength="1" strokeDasharray="1" strokeDashoffset="1" style={{ animation: "border-draw 1.6s var(--ease-out) 120ms forwards" }} />
           </svg>
           {/* Flowing pulse that rides the drawn line once the entrance finishes. */}
           <svg preserveAspectRatio="none" aria-hidden className="pointer-events-none absolute left-6 right-6 top-[1.4375rem] hidden h-px md:block">
-            <line x1="0" y1="0" x2="100%" y2="0" stroke="rgb(33 134 91 / 0.9)" strokeWidth="3" pathLength="1" strokeDasharray="0.25 0.4" style={{ animation: "flow 2.4s var(--ease-out) 1.8s infinite" }} />
+            <line x1="0" y1="0" x2="100%" y2="0" stroke="var(--color-success)" strokeOpacity="0.9" strokeWidth="3" pathLength="1" strokeDasharray="0.25 0.4" style={{ animation: "flow 2.4s var(--ease-out) 1.8s infinite" }} />
           </svg>
           {STEPS.map(({ Icon, title, text }, i) => (
             <Reveal as="li" key={title} delay={i * 0.08} className="relative flex gap-5 md:flex-col md:gap-0">

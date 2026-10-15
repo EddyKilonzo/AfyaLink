@@ -1,5 +1,6 @@
 import type { ApiErrorBody } from "@/types";
 import { API_URL } from "./config";
+import { reportReachable } from "./connectivity";
 
 /**
  * Error thrown for every failed API call. `kind` lets callers decide what to
@@ -132,7 +133,7 @@ async function send(path: string, init: ApiRequestInit, withCsrf: boolean): Prom
   init.signal?.addEventListener("abort", onCallerAbort, { once: true });
 
   try {
-    return await fetch(`${API_URL}${path}`, {
+    const response = await fetch(`${API_URL}${path}`, {
       ...init,
       method,
       headers,
@@ -141,11 +142,15 @@ async function send(path: string, init: ApiRequestInit, withCsrf: boolean): Prom
       redirect: "error",
       signal: controller.signal,
     });
+    reportReachable(true);
+    return response;
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
       if (init.signal?.aborted) throw error;
+      reportReachable(false);
       throw new ApiError("The server took too long to respond.", 0, "timeout");
     }
+    reportReachable(false);
     throw new ApiError("Cannot reach the AfyaLink server. Check your connection.", 0, "network");
   } finally {
     clearTimeout(timer);

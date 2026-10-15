@@ -6,16 +6,17 @@ interface ShortcutConfig {
   keys: string[];
   description: string;
   action: () => void;
-  /** "global" matches everywhere; "input" matches while the focus is in a
-   *  text field (useful for e.g. submit-on-enter). Defaults to "global". */
-  scope?: "global" | "input";
+  /** Where the shortcut is live: "global" outside text fields, "input" while
+   *  the focus is in one (useful for e.g. submit-on-enter). Defaults to
+   *  ["global"]; pass both to match everywhere. */
+  scope?: ("global" | "input")[];
 }
 
 /**
  * Register keyboard shortcuts. `keys` is matched against the user's key
  * combination (case-insensitive, order-independent). Shortcuts are ignored
  * while typing in text inputs, textareas, or contenteditable elements unless
- * `scope: "input"` is set.
+ * its `scope` includes `"input"`.
  *
  * Modifiers are normalized across platforms: Ctrl on Windows/Linux and Cmd on
  * macOS both resolve to `"mod"`, so `["mod", "k"]` works on either.
@@ -39,14 +40,18 @@ export function useKeyboardShortcuts(shortcuts: ShortcutConfig[], deps: Dependen
       return parts.sort().join("+");
     }
 
-    function handler(e: KeyboardEvent) {
-      if (isTyping(document.activeElement)) {
-        const allow = shortcuts.find((s) => s.scope === "input");
-        if (!allow) return;
-      }
+    function normalizeKeys(keys: string[]): string {
+      return keys
+        .map((k) => k.toLowerCase())
+        .map((k) => (k === "cmd" || k === "ctrl" || k === "meta" ? "mod" : k))
+        .sort()
+        .join("+");
+    }
 
+    function handler(e: KeyboardEvent) {
+      const where = isTyping(document.activeElement) ? "input" : "global";
       const combo = normalizeCombo(e);
-      const match = shortcuts.find((s) => s.keys.map((k) => k.toLowerCase()).sort().join("+") === combo);
+      const match = shortcuts.find((s) => (s.scope ?? ["global"]).includes(where) && normalizeKeys(s.keys) === combo);
       if (match) {
         e.preventDefault();
         match.action();
