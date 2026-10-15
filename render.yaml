@@ -10,10 +10,11 @@ services:
     runtime: node
     # Omitted plan = Render's default for new services; set `plan: free` if wanted.
     rootDir: backend
-    # No committed lockfile, so `npm install`, not `npm ci`. --include=dev because
-    # NODE_ENV=production would otherwise skip @nestjs/cli and typescript. npm is
-    # pinned: the npm 10 bundled with Node 22 crashes on fresh installs (edgesOut).
-    buildCommand: npx -y npm@11.20.0 install --include=dev --no-audit --no-fund && npm run build
+    # backend/package-lock.json is committed, so `npm ci` gives a reproducible
+    # install. backend/.npmrc sets include=dev, so @nestjs/cli and typescript are
+    # installed even though NODE_ENV=production is also applied at build time.
+    # Keep this identical to the Build Command in the Render dashboard.
+    buildCommand: npm ci && npm run build
     startCommand: npm run start:prod
     healthCheckPath: /api/health
     autoDeploy: true

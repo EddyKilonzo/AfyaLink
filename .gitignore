@@ -21,6 +21,8 @@ docs/development-plan.md
 # ---------------------------------------------------------------------------
 node_modules/
 package-lock.json
+# The backend lockfile is committed so Render can run `npm ci` reproducibly.
+!backend/package-lock.json
 .pnp
 .pnp.*
 .yarn/*
