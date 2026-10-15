@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import type { LatLngTuple } from "leaflet";
 import L from "leaflet";
 import { useEffect, useState } from "react";
+import { MapPinned } from "lucide-react";
 import { cx } from "@/components/ui/cx";
 
 /** Default marker: a pin in AfyaLink green. */
@@ -52,8 +53,16 @@ export function LocationPicker({
 
   if (!ready) {
     return (
-      <div className={cx("rounded-2xl bg-sunken ring-1 ring-inset ring-line", className)} aria-hidden>
-        <div className="grid h-full place-items-center text-sm text-muted">Loading map…</div>
+      <div className={cx("relative overflow-hidden rounded-2xl bg-sunken ring-1 ring-inset ring-line", className)} aria-hidden>
+        <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+        <div className="grid h-full place-items-center">
+          <div className="flex flex-col items-center gap-2 text-muted">
+            <span className="grid size-9 place-items-center rounded-xl bg-surface ring-1 ring-inset ring-line">
+              <MapPinned className="size-5 text-brand-600" aria-hidden />
+            </span>
+            <span className="text-sm font-medium">Loading map…</span>
+          </div>
+        </div>
       </div>
     );
   }

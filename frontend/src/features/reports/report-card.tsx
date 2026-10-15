@@ -65,7 +65,7 @@ export function ReportCard({
   );
 
   return href ? (
-    <Link href={href} className={card}>
+    <Link href={href} className={cx(card, "focus-ring")}>
       {content}
     </Link>
   ) : (

@@ -65,7 +65,7 @@ export function ReportRow({
 
   const className = "group flex items-center gap-3 rounded-2xl px-3 py-3 transition-[background-color,transform,box-shadow] duration-[var(--duration-micro)] ease-[var(--ease-emphasize)] hover:bg-sunken hover:shadow-[var(--shadow-ring)] active:scale-[0.992] sm:gap-4 sm:px-4";
   return href ? (
-    <Link href={href} className={cx(className, "press-lift")}>
+    <Link href={href} className={cx(className, "press-lift focus-ring")}>
       {body}
     </Link>
   ) : (
