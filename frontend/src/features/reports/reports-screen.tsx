@@ -8,10 +8,12 @@ import { Pagination } from "@/components/pagination";
 import { Button, ButtonLink, EmptyState, ErrorState, FilterSelect, LoadingState, PageHeader, Panel } from "@/components/ui";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/features/auth/auth-context";
+import { formatDateTime } from "@/lib/format";
 import { openPrintablePdf } from "@/lib/pdf-generator";
 import { CATEGORY_LABELS, REPORT_CATEGORIES, REPORT_STATUSES, STATUS_LABELS, type ReportCategory, type ReportStatus } from "@/types";
 import { useReportsFeed } from "./hooks";
 import { ReportCard } from "./report-card";
+import { reportStats, reportTable, severityBars, type PdfReportRow } from "./report-pdf";
 import { ReportRow } from "./report-row";
 
 export function ReportsScreen() {
@@ -27,39 +29,44 @@ export function ReportsScreen() {
   const local = feed.items.filter((i) => i.source === "local");
   const server = feed.items.filter((i) => i.source === "server");
 
-  function reportStatus(item: (typeof feed.items)[number]): string {
-    const r = item.report as { status?: string };
-    return r.status || "Pending";
-  }
-
   async function exportPdf() {
     if (!user) return;
     setExportingPdf(true);
     try {
       const stamp = new Date().toISOString().slice(0, 10);
+      const rows: PdfReportRow[] = feed.items.map((i) => ({
+        conditionName: i.report.conditionName,
+        category: i.report.category,
+        severity: i.report.severity,
+        casesCount: i.report.casesCount,
+        observedAt: i.observedAt,
+        status: i.source === "server" ? i.report.status : undefined,
+      }));
+      const waiting = rows.filter((r) => !r.status).length;
       openPrintablePdf(
         {
-          title: `My reports — ${stamp}`,
-          subtitle: `${feed.items.length} report(s)${filtered ? " matching filters" : ""}`,
-          generatedAt: new Date().toISOString(),
+          title: "My health reports",
+          subtitle: `${rows.length.toLocaleString()} report(s)${filtered ? " matching your filters" : ""} · ${user.fullName}`,
+          kind: "Personal summary",
+          generatedAt: formatDateTime(new Date().toISOString()),
           generatedBy: user.fullName,
-          role: user.role,
+          role: user.role === "CHV" ? "Community Health Volunteer" : user.role,
         },
         [
-          {
-            heading: "Filters",
-            rows: [
-              { label: "Category", value: category || "All" },
-              { label: "Status", value: status || "Any" },
-            ],
-          },
-          {
-            heading: `Reports (${feed.items.length})`,
-            rows: feed.items.map((i) => ({
-              label: i.report.conditionName,
-              value: `${CATEGORY_LABELS[i.report.category]} · ${i.report.severity} · ${reportStatus(i)} · ${i.report.casesCount} case(s)`,
-            })),
-          },
+          reportStats(rows, [{ label: "Waiting to sync", value: waiting.toLocaleString(), hint: waiting ? "Saved on this device" : "All on the server" }]),
+          severityBars(rows),
+          ...(filtered
+            ? [
+                {
+                  heading: "Filters",
+                  rows: [
+                    { label: "Category", value: category ? CATEGORY_LABELS[category] : "All" },
+                    { label: "Status", value: status ? STATUS_LABELS[status] : "Any" },
+                  ],
+                },
+              ]
+            : []),
+          reportTable(rows),
         ],
         `my-reports-${stamp}.pdf`,
       );

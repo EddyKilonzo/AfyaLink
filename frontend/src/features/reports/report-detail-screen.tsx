@@ -11,11 +11,11 @@ import { useConfirm } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/features/auth/auth-context";
 import { useLocations } from "@/features/locations/hooks";
-import { openPrintablePdf } from "@/lib/pdf-generator";
-import { formatDateTime, formatRelative } from "@/lib/format";
+import { openPrintablePdf, type PdfSection } from "@/lib/pdf-generator";
+import { formatDate, formatDateTime, formatRelative } from "@/lib/format";
 import { isUuid } from "@/lib/security";
 import { formatLocation } from "@/services/locations.service";
-import { AGE_GROUP_LABELS, CATEGORY_LABELS, NEXT_STATUSES, STATUS_LABELS, type ReviewStatus, type ServerReport } from "@/types";
+import { AGE_GROUP_LABELS, CATEGORY_LABELS, NEXT_STATUSES, SEVERITY_LABELS, STATUS_LABELS, type ReviewStatus, type ServerReport } from "@/types";
 import { canCorrectReport, useReport, useReviewReport } from "./hooks";
 import { CategoryIcon } from "./report-row";
 
@@ -140,59 +140,70 @@ export function ReportDetailScreen() {
 
 function ReportPdfButton({ report }: { report: ServerReport }) {
   const { user } = useAuth();
+  const { byId } = useLocations();
+  const toast = useToast();
+  const location = report.locationId ? byId.get(report.locationId) : undefined;
+
+  function exportPdf() {
+    const gps = report.latitude && report.longitude ? `${Number(report.latitude).toFixed(5)}, ${Number(report.longitude).toFixed(5)}` : "Not recorded";
+    const sections: PdfSection[] = [
+      {
+        heading: "At a glance",
+        stats: [
+          { label: "Cases", value: report.casesCount.toLocaleString(), hint: AGE_GROUP_LABELS[report.ageGroup] },
+          { label: "Severity", value: SEVERITY_LABELS[report.severity] },
+          { label: "Review status", value: STATUS_LABELS[report.status], hint: report.reviewedAt ? `Updated ${formatDate(report.reviewedAt)}` : "Not reviewed yet" },
+          { label: "Observed", value: formatDate(report.observedAt), hint: new Date(report.observedAt).toLocaleTimeString(undefined, { timeStyle: "short" }) },
+        ],
+      },
+      {
+        heading: "Report details",
+        rows: [
+          { label: "Condition", value: report.conditionName },
+          { label: "Category", value: CATEGORY_LABELS[report.category] },
+          { label: "Age group", value: AGE_GROUP_LABELS[report.ageGroup] },
+          { label: "Received by server", value: formatDateTime(report.receivedAt) },
+          { label: "Symptoms", value: report.symptoms?.length ? report.symptoms.join(", ") : "None recorded" },
+          { label: "Report ID", value: report.id },
+          ...(report.notes ? [{ label: "Notes", value: report.notes }] : []),
+        ],
+      },
+      {
+        heading: "Location",
+        rows: [
+          { label: "Area", value: location ? formatLocation(location) : report.locationId ? `Area #${report.locationId}` : "No area recorded" },
+          { label: "GPS position", value: gps },
+        ],
+      },
+      ...(report.reviewNote
+        ? [{ heading: "Review", description: "Notes from the reviewing administrator", rows: [{ label: "Reviewer note", value: report.reviewNote }] }]
+        : []),
+    ];
+    try {
+      openPrintablePdf(
+        {
+          title: report.conditionName,
+          subtitle: `${CATEGORY_LABELS[report.category]} · ${SEVERITY_LABELS[report.severity]} severity · ${report.casesCount.toLocaleString()} case(s)`,
+          kind: "Health report",
+          generatedAt: formatDateTime(new Date().toISOString()),
+          generatedBy: user?.fullName || "AfyaLink user",
+          role: user?.role === "ADMIN" ? "Administrator" : "Community Health Volunteer",
+        },
+        sections,
+        `report-${report.id.slice(0, 8)}.pdf`,
+      );
+    } catch (error) {
+      toast.error("PDF failed", error instanceof Error ? error.message : "Could not open the PDF window.");
+    }
+  }
+
   return (
-    <Button
-      variant="outline"
-      className="w-full"
-      onClick={() => {
-        openPrintablePdf(
-          {
-            title: `Report — ${report.conditionName}`,
-            subtitle: `${CATEGORY_LABELS[report.category]} · ${report.casesCount} case(s)`,
-            generatedAt: formatDateTime(new Date().toISOString()),
-            generatedBy: user?.fullName || "AfyaLink user",
-            role: user?.role || "CHV",
-          },
-          [
-            {
-              heading: "Report",
-              rows: [
-                { label: "Condition", value: report.conditionName },
-                { label: "Category", value: CATEGORY_LABELS[report.category] },
-                { label: "Severity", value: report.severity },
-                { label: "Cases", value: report.casesCount.toLocaleString() },
-                { label: "Age group", value: AGE_GROUP_LABELS[report.ageGroup] },
-                { label: "Status", value: STATUS_LABELS[report.status] },
-                { label: "Observed", value: formatDateTime(report.observedAt) },
-                { label: "Received", value: formatDateTime(report.receivedAt) },
-                { label: "Notes", value: report.notes || "—" },
-              ],
-            },
-            {
-              heading: "Location",
-              rows: [
-                { label: "Area", value: report.locationId ? `Area #${report.locationId}` : "No area recorded" },
-                { label: "GPS", value: report.latitude && report.longitude ? `${Number(report.latitude).toFixed(5)}, ${Number(report.longitude).toFixed(5)}` : "Not recorded" },
-              ],
-            },
-            ...(report.reviewNote
-              ? [
-                  {
-                    heading: "Review",
-                    rows: [{ label: "Reviewer note", value: report.reviewNote }],
-                  },
-                ]
-              : []),
-          ],
-          `report-${report.id.slice(0, 8)}.pdf`,
-        );
-      }}
-      icon={<Eye className="size-4" aria-hidden />}
-    >
+    <Button variant="outline" className="w-full" onClick={exportPdf} icon={<Eye className="size-4" aria-hidden />}>
       Download as PDF
     </Button>
   );
 }
+
 export function ReviewActions({ report, onDone, compact = false }: { report: ServerReport; onDone: () => void; compact?: boolean }) {
   const review = useReviewReport();
   const confirm = useConfirm();

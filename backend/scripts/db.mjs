@@ -77,6 +77,23 @@ function dbSettings() {
   };
 }
 
+/** Postgres TLS, matching resolveDbSsl() in src/config/configuration.ts. */
+function pgSsl(host) {
+  const explicit = process.env.DB_SSL?.trim().toLowerCase();
+  let mode = explicit || null;
+  if (!mode && process.env.DATABASE_URL) {
+    try {
+      mode = new URL(process.env.DATABASE_URL).searchParams.get('sslmode');
+    } catch {
+      // Reported by dbSettings().
+    }
+  }
+  if (mode === 'off' || mode === 'false' || mode === 'disable') return false;
+  if (mode === 'no-verify') return { rejectUnauthorized: false };
+  if (mode) return { rejectUnauthorized: true };
+  return ['localhost', '127.0.0.1', '::1'].includes(host) ? false : { rejectUnauthorized: true };
+}
+
 async function sqlFiles(folder) {
   try {
     const entries = await readdir(path.join(databaseDir, folder));
@@ -95,7 +112,7 @@ async function createPool(settings) {
       user: settings.user,
       password: settings.password,
       database: settings.database,
-      ssl: { rejectUnauthorized: false },
+      ssl: pgSsl(settings.host),
       max: 1,
     });
   } else {

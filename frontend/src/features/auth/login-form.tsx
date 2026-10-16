@@ -72,7 +72,7 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
+    <form method="post" onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
       <AnimatePresence initial={false}>
         {notice && (
           <motion.p

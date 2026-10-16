@@ -29,7 +29,7 @@ const VARIANTS: Record<ButtonVariant, string> = {
     "hover:shadow-[inset_0_1px_0_rgb(255_255_255/0.12),0_10px_24px_-10px_rgb(196_61_75/0.7)] " +
     "active:shadow-[inset_0_1px_0_rgb(255_255_255/0.12),0_3px_8px_-4px_rgb(196_61_75/0.6)] " +
     "transition-shadow var(--duration-ui) var(--ease-emphasize)",
-  inverse: "bg-white text-brand-900 hover:bg-brand-50 shadow-[0_8px_24px_-10px_rgb(0_0_0/0.45)] hover:shadow-[0_12px_32px_-12px_rgb(0_0_0/0.55)] transition-shadow var(--duration-ui) var(--ease-emphasize)",
+  inverse: "bg-white text-brand-900 hover:bg-white/90 shadow-[0_8px_24px_-10px_rgb(0_0_0/0.45)] hover:shadow-[0_12px_32px_-12px_rgb(0_0_0/0.55)] transition-shadow var(--duration-ui) var(--ease-emphasize)",
 };
 
 const SIZES: Record<ButtonSize, string> = {

@@ -19,6 +19,8 @@ export interface AppConfig {
     database: string;
     /** Database dialect: 'mysql' or 'postgres' */
     dialect: 'mysql' | 'postgres';
+    /** Postgres TLS: 'off', 'verify' (certificate checked) or 'no-verify'. Ignored for MySQL. */
+    ssl: DbSsl;
     configured: boolean;
   };
   auth: {
@@ -68,6 +70,36 @@ function parseKey(value: string | undefined): Buffer | null {
 function int(value: string | undefined, fallback: number): number {
   const parsed = Number.parseInt(value ?? '', 10);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+export type DbSsl = 'off' | 'verify' | 'no-verify';
+
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '']);
+
+/**
+ * Postgres TLS mode. DB_SSL wins (off | verify | no-verify); otherwise the URL's
+ * `sslmode` (disable → off, no-verify → no-verify, anything else → verify);
+ * otherwise off for a local server and verify for a remote one, so managed
+ * databases such as Neon get a checked certificate by default.
+ */
+function resolveDbSsl(explicit: string | undefined, url: string | undefined, host: string): DbSsl {
+  const value = explicit?.trim().toLowerCase();
+  if (value) {
+    if (value === 'off' || value === 'false' || value === 'disable') return 'off';
+    if (value === 'no-verify') return 'no-verify';
+    if (value === 'verify' || value === 'true' || value === 'require') return 'verify';
+    throw new Error('DB_SSL must be one of off, verify, no-verify.');
+  }
+  let mode: string | null = null;
+  try {
+    mode = url ? new URL(url).searchParams.get('sslmode') : null;
+  } catch {
+    // Malformed URLs are reported by parseDatabaseUrl.
+  }
+  if (mode === 'disable') return 'off';
+  if (mode === 'no-verify') return 'no-verify';
+  if (mode) return 'verify';
+  return LOCAL_HOSTS.has(host) ? 'off' : 'verify';
 }
 
 interface DbParts {
@@ -187,6 +219,7 @@ export function loadConfiguration(): AppConfig {
     db: {
       ...db,
       host: db.host || 'localhost',
+      ssl: resolveDbSsl(env.DB_SSL, env.DATABASE_URL, db.host),
       configured: Boolean(db.host && db.database && db.username),
     },
     auth: {

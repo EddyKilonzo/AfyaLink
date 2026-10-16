@@ -10,7 +10,7 @@ const CONTROL =
   "placeholder:text-muted/70 transition-[border-color,box-shadow,background-color,transform] duration-[var(--duration-micro)] ease-[var(--ease-emphasize)] " +
   "hover:border-brand-300 hover:shadow-[0_1px_2px_rgb(11_61_53/0.06),0_4px_12px_-4px_rgb(20_108_90/0.12)] " +
   "focus:border-brand-500 focus:outline-none focus:shadow-[var(--shadow-glow),0_4px_12px_-4px_rgb(20_108_90/0.16)] focus:-translate-y-[0.5px] " +
-  "disabled:cursor-not-allowed disabled:bg-sunken disabled:text-muted read-only:bg-sunken/60 " +
+  "disabled:cursor-not-allowed disabled:bg-sunken disabled:text-muted [&:read-only:not(select)]:bg-sunken/60 " +
   "aria-[invalid=true]:border-error aria-[invalid=true]:focus:shadow-[0_0_0_4px_rgb(196_61_75/0.14),0_4px_12px_-4px_rgb(196_61_75/0.12)]";
 
 /** Class for native controls not wrapped by the components below. */

@@ -3,7 +3,6 @@
 import {
   Activity,
   ArrowRight,
-  BarChart3,
   Building2,
   CheckCircle2,
   ClipboardCheck,
@@ -22,14 +21,17 @@ import { Button, EmptyState, ErrorState, LoadingState, PageHeader, Panel, PanelH
 import { Segmented } from "@/components/ui/segmented";
 import { useToast } from "@/components/ui/toast";
 import { DailyReportsChart, RankedBarChart } from "@/features/analytics/charts";
+import { CHART_MARK, SEVERITY_RAMP, STATUS_RAMP } from "@/features/analytics/colors";
+import { ProportionBar, Sparkline, TrendBadge } from "@/features/analytics/insights";
 import { useAnalyticsSummary, useMapPoints } from "@/features/analytics/hooks";
 import { MapLegend, MapView } from "@/features/analytics/map-view";
 import type { MapMode } from "@/features/analytics/report-map";
 import { useServerReports } from "@/features/reports/hooks";
 import { ReportRow } from "@/features/reports/report-row";
-import { CATEGORY_LABELS, STATUS_LABELS } from "@/types";
+import { CATEGORY_LABELS, REPORT_SEVERITIES, REPORT_STATUSES, SEVERITY_LABELS, STATUS_LABELS } from "@/types";
 import { useAuth } from "@/features/auth/auth-context";
 import { useExportReports, useExportReportsPdf } from "./hooks";
+import { openPrintWindow } from "@/lib/pdf-generator";
 
 const PERIODS = [
   { value: 7, label: "7d" },
@@ -54,7 +56,15 @@ export function AdminOverviewScreen() {
 
   async function exportPdf() {
     if (!user) return;
-    const filename = await pdfExporter.run({ from: s?.since }, { fullName: user.fullName, role: user.role });
+    // Open the window now, inside the click: browsers block pop-ups opened after an await.
+    let win: Window;
+    try {
+      win = openPrintWindow();
+    } catch (error) {
+      toast.error("PDF failed", error instanceof Error ? error.message : "Could not open the PDF window.");
+      return;
+    }
+    const filename = await pdfExporter.run(win, { from: s?.since }, { fullName: user.fullName, role: user.role });
     if (filename) toast.success("PDF opened", "Save it from the print dialog as PDF.");
   }
 
@@ -97,8 +107,27 @@ export function AdminOverviewScreen() {
             className="press-lift h-full"
           />
         </Link>
-        <StatCard label="Reports" value={s?.totals.reports ?? null} icon={FileText} hint={`Last ${days} days`} />
-        <StatCard label="Cases" value={s?.totals.cases ?? null} icon={Activity} hint={`Last ${days} days`} />
+        <StatCard
+          label="Reports"
+          value={s?.totals.reports ?? null}
+          icon={FileText}
+          hint={`Last ${days} days`}
+          footer={
+            s && (
+              <>
+                <TrendBadge current={s.totals.reports} previous={s.previousTotals?.reports} days={days} />
+                <Sparkline byDay={s.byDay} since={s.since} days={s.periodDays} />
+              </>
+            )
+          }
+        />
+        <StatCard
+          label="Cases"
+          value={s?.totals.cases ?? null}
+          icon={Activity}
+          hint={`Last ${days} days`}
+          footer={s && <TrendBadge current={s.totals.cases} previous={s.previousTotals?.cases} days={days} />}
+        />
         <StatCard label="Counties reporting" value={s?.byCounty.length ?? null} icon={Landmark} hint="With at least one report" />
       </section>
 
@@ -121,10 +150,19 @@ export function AdminOverviewScreen() {
                     <div key={c.county} className="flex items-center gap-3">
                       <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-50 text-xs font-semibold text-brand-700">{i + 1}</span>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-ink">{c.county}</p>
-                        <p className="text-xs text-muted">{c.reports} reports</p>
+                        <div className="flex items-baseline justify-between gap-2">
+                          <p className="truncate text-sm font-medium text-ink">{c.county}</p>
+                          <p className="shrink-0 text-xs tabular-nums text-muted">
+                            <span className="font-semibold text-ink">{c.reports}</span> reports · {c.cases} cases
+                          </p>
+                        </div>
+                        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-sunken" aria-hidden>
+                          <div
+                            className="h-full rounded-full transition-[width] duration-[var(--duration-section)] ease-[var(--ease-out)]"
+                            style={{ width: `${Math.max(4, (c.reports / (s.byCounty[0]?.reports || 1)) * 100)}%`, background: CHART_MARK }}
+                          />
+                        </div>
                       </div>
-                      <BarChart3 className="size-4 text-muted" aria-hidden />
                     </div>
                   ))}
                 </div>
@@ -137,6 +175,47 @@ export function AdminOverviewScreen() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
+        <Panel>
+          <PanelHeader title="Severity mix" description={`All reports by severity, last ${days} days`} />
+          <div className="px-4 pb-5 pt-5 sm:px-5">
+            {s ? (
+              <ProportionBar
+                ariaLabel="Reports by severity"
+                unit="report"
+                segments={REPORT_SEVERITIES.map((sev) => ({
+                  key: sev,
+                  label: SEVERITY_LABELS[sev],
+                  value: s.bySeverity.find((b) => b.severity === sev)?.count ?? 0,
+                  color: SEVERITY_RAMP[sev],
+                }))}
+              />
+            ) : (
+              <Skeleton className="h-24 w-full rounded-xl" />
+            )}
+          </div>
+        </Panel>
+        <Panel>
+          <PanelHeader title="Review pipeline" description="Where this period's reports are in review" />
+          <div className="px-4 pb-5 pt-5 sm:px-5">
+            {s ? (
+              <ProportionBar
+                ariaLabel="Reports by review status"
+                unit="report"
+                segments={REPORT_STATUSES.map((st) => ({
+                  key: st,
+                  label: STATUS_LABELS[st],
+                  value: s.byStatus.find((b) => b.status === st)?.count ?? 0,
+                  color: STATUS_RAMP[st],
+                }))}
+              />
+            ) : (
+              <Skeleton className="h-24 w-full rounded-xl" />
+            )}
+          </div>
+        </Panel>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
         <Breakdown title="By category" description="Number of reports" loading={!s} empty={s?.byCategory.length === 0}>
           {s && <RankedBarChart ariaLabel="Reports by category" valueName="Reports" data={s.byCategory.map((c) => ({ label: CATEGORY_LABELS[c.category], value: c.count }))} />}
         </Breakdown>
@@ -145,9 +224,6 @@ export function AdminOverviewScreen() {
         </Breakdown>
         <Breakdown title="Top conditions" description="Total cases reported" loading={!s} empty={s?.topConditions.length === 0}>
           {s && <RankedBarChart ariaLabel="Cases by condition" valueName="Cases" data={s.topConditions.map((c) => ({ label: c.condition, value: c.cases }))} />}
-        </Breakdown>
-        <Breakdown title="Review progress" description="Reports by review status" loading={!s} empty={s?.byStatus.length === 0}>
-          {s && <RankedBarChart ariaLabel="Reports by review status" valueName="Reports" data={s.byStatus.map((c) => ({ label: STATUS_LABELS[c.status], value: c.count }))} />}
         </Breakdown>
       </div>
 

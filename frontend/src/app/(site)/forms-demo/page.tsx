@@ -85,7 +85,7 @@ export default function FormsDemoPage() {
                 label="Password"
                 type="password"
                 placeholder=" "
-                showPasswordToggle
+
                 characterCount={32}
                 required
                 hint="At least 8 characters"
@@ -290,7 +290,7 @@ export default function FormsDemoPage() {
               label="Password"
               type="password"
               placeholder=" "
-              showPasswordToggle
+
             />
           </Card>
           <Card className="p-6 space-y-4">

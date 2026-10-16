@@ -3,12 +3,14 @@
 import { useAsync } from "@/hooks/use-async";
 import { useMutation } from "@/hooks/use-mutation";
 import { saveFile } from "@/lib/api";
-import { openPrintablePdf } from "@/lib/pdf-generator";
+import { writePrintablePdf } from "@/lib/pdf-generator";
 import { auditService, type AuditFilters } from "@/services/audit.service";
 import { reportsService, type ReportFilters } from "@/services/reports.service";
 import { syncService, type SyncLogFilters } from "@/services/sync.service";
 import { usersService, type CreateUserInput, type UpdateUserInput, type UserFilters } from "@/services/users.service";
-import { CATEGORY_LABELS, type ServerReport } from "@/types";
+import { CATEGORY_LABELS, SEVERITY_LABELS, STATUS_LABELS, type ServerReport } from "@/types";
+import { reportStats, reportTable, severityBars, statusBars } from "@/features/reports/report-pdf";
+import { formatDate, formatDateTime } from "@/lib/format";
 
 // Every call here is ADMIN-only on the server; these hooks add no access control of their own.
 
@@ -67,37 +69,56 @@ export function useExportReports() {
 /** Opens a branded PDF print window for the whole export (forest-green header,
  * consistent shadows). Zero dependencies: the browser prints a styled page and
  * the user saves it as PDF from the OS print dialog. */
+/** The API caps page size at 100, so the export pages through, up to this many reports. */
+const PDF_PAGE_SIZE = 100;
+const PDF_MAX_REPORTS = 2_000;
+
 export function useExportReportsPdf() {
-  return useMutation(async (filters: Omit<ReportFilters, "page" | "limit">, actor: { fullName: string; role: string }) => {
-    const reports = await reportsService.list({ ...filters, limit: 10_000 });
+  return useMutation(async (win: Window, filters: Omit<ReportFilters, "page" | "limit">, actor: { fullName: string; role: string }) => {
+    let items: ServerReport[] = [];
+    try {
+      for (let page = 1; items.length < PDF_MAX_REPORTS; page++) {
+        const batch = await reportsService.list({ ...filters, page, limit: PDF_PAGE_SIZE });
+        items = items.concat(batch.items);
+        if (page >= batch.totalPages || batch.items.length === 0) break;
+      }
+    } catch (error) {
+      win.close();
+      throw error;
+    }
+    const reports = { items: items.slice(0, PDF_MAX_REPORTS) };
     const stamp = new Date().toISOString().slice(0, 10);
-    openPrintablePdf(
+    const period = filters.from ? `since ${filters.from.slice(0, 10)}` : "all time";
+    const filterLabel = [
+      filters.category ? CATEGORY_LABELS[filters.category] : null,
+      filters.severity ? SEVERITY_LABELS[filters.severity] : null,
+      filters.status ? STATUS_LABELS[filters.status] : null,
+    ].filter(Boolean);
+    writePrintablePdf(
+      win,
       {
-        title: `AfyaLink reports — ${stamp}`,
-        subtitle: `${reports.items.length} report(s), last ${filters.to ? "to " + filters.to : "all"}`,
-        generatedAt: new Date().toISOString(),
+        title: "Community health reports",
+        subtitle: `${reports.items.length.toLocaleString()} report(s), ${period}${items.length > PDF_MAX_REPORTS ? ` (first ${PDF_MAX_REPORTS.toLocaleString()})` : ""}${filterLabel.length ? ` · ${filterLabel.join(", ")}` : ""}`,
+        kind: "Reports export",
+        generatedAt: formatDateTime(new Date().toISOString()),
         generatedBy: actor.fullName,
-        role: actor.role,
+        role: actor.role === "ADMIN" ? "Administrator" : actor.role,
       },
       [
+        reportStats(reports.items, [{ label: "Awaiting review", value: reports.items.filter((r) => r.status === "SUBMITTED").length.toLocaleString() }]),
+        severityBars(reports.items),
+        statusBars(reports.items),
         {
-          heading: "Summary",
+          heading: "Filters",
           rows: [
-            { label: "Total reports", value: reports.items.length.toLocaleString() },
-            { label: "From", value: filters.from || "—" },
-            { label: "To", value: filters.to || "—" },
-            { label: "Category", value: filters.category || "All" },
-            { label: "Severity", value: filters.severity || "All" },
-            { label: "Status", value: filters.status || "All" },
+            { label: "From", value: filters.from ? formatDate(filters.from) : "Any time" },
+            { label: "To", value: filters.to ? formatDate(filters.to) : "Now" },
+            { label: "Category", value: filters.category ? CATEGORY_LABELS[filters.category] : "All" },
+            { label: "Severity", value: filters.severity ? SEVERITY_LABELS[filters.severity] : "All" },
+            { label: "Status", value: filters.status ? STATUS_LABELS[filters.status] : "All" },
           ],
         },
-        {
-          heading: `Reports (${reports.items.length})`,
-          rows: reports.items.map((r: ServerReport) => ({
-            label: r.conditionName,
-            value: `${CATEGORY_LABELS[r.category]} · ${r.severity} · ${r.status} · ${r.casesCount} case(s)`,
-          })),
-        },
+        reportTable(reports.items),
       ],
       `afyalink-reports-${stamp}.pdf`,
     );

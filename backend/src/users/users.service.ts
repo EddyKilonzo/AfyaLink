@@ -13,7 +13,7 @@ import { Repository } from 'typeorm';
 import { BCRYPT_ROUNDS } from '../common/constants.js';
 import type { SessionUser } from '../common/decorators/auth.decorators.js';
 import { paginate, type Paginated } from '../common/dto/pagination.dto.js';
-import { errorCode, toHttpException } from '../common/errors/handle-error.js';
+import { errorCode, isUniqueViolation, toHttpException } from '../common/errors/handle-error.js';
 import { escapeLike } from '../common/validation/validators.js';
 import { DatabaseService } from '../database/database.service.js';
 import { User, UserRole } from '../database/entities/user.entity.js';
@@ -124,9 +124,10 @@ export class UsersService {
       if (query.role) qb.andWhere('u.role = :role', { role: query.role });
       if (query.isActive !== undefined) qb.andWhere('u.isActive = :isActive', { isActive: query.isActive });
       if (query.q) {
-        // Columns use a case-insensitive collation; backslash is MySQL's default LIKE escape.
-        const pattern = `%${escapeLike(query.q)}%`;
-        qb.andWhere('(u.fullName LIKE :pattern OR u.email LIKE :pattern)', { pattern });
+        // LOWER() on both sides: PostgreSQL's LIKE is case-sensitive (MySQL's
+        // collation is not). Backslash is the default LIKE escape on both.
+        const pattern = `%${escapeLike(query.q.toLowerCase())}%`;
+        qb.andWhere('(LOWER(u.fullName) LIKE :pattern OR LOWER(u.email) LIKE :pattern)', { pattern });
       }
       const [rows, total] = await qb
         .skip((query.page - 1) * query.limit)
@@ -165,7 +166,7 @@ export class UsersService {
           isActive: true,
         });
       } catch (error) {
-        if (errorCode(error) === 'ER_DUP_ENTRY') throw new ConflictException('A user with this email already exists.');
+        if (isUniqueViolation(error)) throw new ConflictException('A user with this email already exists.');
         throw error;
       }
       return toPublicUser(await this.users.findOneOrFail({ where: { id } }));

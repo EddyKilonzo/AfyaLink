@@ -23,6 +23,24 @@ function loadPublicEnvFromRoot(): void {
 loadPublicEnvFromRoot();
 
 const isDev = process.env.NODE_ENV !== "production";
+
+/**
+ * Production API proxy. With BACKEND_ORIGIN set (e.g. the Render service URL)
+ * and NEXT_PUBLIC_API_URL unset, the browser calls same-origin `/api/*` and Next
+ * forwards it to the backend. Session cookies stay first-party (a SameSite=Lax
+ * cookie from another site would never be sent) and no cross-site CORS is
+ * involved. Read at build time, so set it in the hosting provider's build env.
+ */
+const backendOrigin = (() => {
+  const raw = process.env.BACKEND_ORIGIN?.trim();
+  if (!raw) return null;
+  try {
+    return new URL(raw).origin;
+  } catch {
+    console.warn(`[AfyaLink] BACKEND_ORIGIN "${raw}" is not a valid URL; /api will not be proxied.`);
+    return null;
+  }
+})();
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api";
 let apiOrigin = "http://localhost:3001";
 try {
@@ -33,14 +51,16 @@ try {
 
 /**
  * Content-Security-Policy. Next.js App Router injects inline bootstrap scripts,
- * so `script-src` keeps `'unsafe-inline'`; `strict-dynamic` is the W3C-recommended
- * mitigation — any script that already loaded from `'self'` can load more
- * scripts, while inline event handlers and `javascript:` URLs still cannot.
+ * so `script-src` needs `'unsafe-inline'`. Do NOT add `'strict-dynamic'`: it
+ * makes browsers ignore `'self'` and `'unsafe-inline'` and trust only nonced or
+ * hashed scripts. We send no nonce (per-request nonces would force every page to
+ * render dynamically, defeating static prerendering), so every script would be
+ * blocked, React would never hydrate, and forms would fall back to native submits.
  * The other directives are fully restrictive.
  */
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://res.cloudinary.com",
   "font-src 'self'",
@@ -76,6 +96,9 @@ const nextConfig: NextConfig = {
         as: "*.css",
       },
     },
+  },
+  async rewrites() {
+    return backendOrigin ? [{ source: "/api/:path*", destination: `${backendOrigin}/api/:path*` }] : [];
   },
   async headers() {
     return [

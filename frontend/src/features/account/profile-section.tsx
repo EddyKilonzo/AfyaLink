@@ -73,7 +73,7 @@ export function ProfileSection() {
   return (
     <Panel>
       <PanelHeader title="Profile" description="How your name and phone appear to your area's team." />
-      <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6 px-5 pb-5 pt-4 sm:px-6">
+      <form method="post" onSubmit={handleSubmit(onSubmit)} className="grid gap-6 px-5 pb-5 pt-4 sm:px-6">
         {/* Profile Picture */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-4">

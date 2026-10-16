@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertCircle, Check, CheckCircle, ChevronDown, Eye, EyeOff, Loader2, X, XCircle } from "lucide-react";
-import { forwardRef, type FormEvent, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes, useCallback, useId, useRef, useState } from "react";
+import { forwardRef, type FormEvent, type Ref, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes, useCallback, useId, useRef, useState } from "react";
 import { cx } from "./cx";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -13,7 +13,7 @@ const CONTROL =
   "placeholder:text-muted/70 transition-[border-color,box-shadow,background-color,transform] duration-[var(--duration-micro)] ease-[var(--ease-emphasize)] " +
   "hover:border-brand-300 hover:shadow-[0_1px_2px_rgb(11_61_53/0.06),0_4px_12px_-4px_rgb(20_108_90/0.12)] " +
   "focus:border-brand-500 focus:outline-none focus:shadow-[var(--shadow-glow),0_4px_12px_-4px_rgb(20_108_90/0.16)] focus:-translate-y-[0.5px] " +
-  "disabled:cursor-not-allowed disabled:bg-sunken disabled:text-muted read-only:bg-sunken/60 " +
+  "disabled:cursor-not-allowed disabled:bg-sunken disabled:text-muted [&:read-only:not(select)]:bg-sunken/60 " +
   "aria-[invalid=true]:border-error aria-[invalid=true]:focus:shadow-[0_0_0_4px_rgb(196_61_75/0.14),0_4px_12px_-4px_rgb(196_61_75/0.12)]";
 
 export const inputClass = cx(CONTROL, "mt-1.5 min-h-12 py-2.5");
@@ -373,7 +373,7 @@ export function Form({ onSubmit, children, className, initialValues = {}, valida
   }, [initialValues]);
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit} className={cx("space-y-6", className)} noValidate>
+    <form method="post" ref={formRef} onSubmit={handleSubmit} className={cx("space-y-6", className)} noValidate>
       {children}
 
       <AnimatePresence mode="popLayout">
@@ -552,6 +552,44 @@ export function FormSection({ title, description, children }: { title: string; d
   );
 }
 
+/** Shared look for a floated label: small, inside the top of the control. */
+const FLOATING_LABEL =
+  "pointer-events-none absolute left-3.5 top-2 z-[1] flex items-baseline gap-0.5 text-[0.75rem] font-medium leading-4 text-muted " +
+  "transition-[top,font-size,color] duration-[var(--duration-micro)] ease-[var(--ease-emphasize)] " +
+  "group-focus-within:text-brand-600 group-has-[[aria-invalid=true]]:text-error group-has-[:disabled]:text-muted/60";
+
+/**
+ * Text-like controls drop the label to placeholder size while empty and not
+ * focused. Needs the control to carry `peer` and come before the label. Selects
+ * and date inputs never match :placeholder-shown, so their label stays floated.
+ */
+const FLOAT_DOWN_WHEN_EMPTY =
+  "peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-[0.9375rem] peer-placeholder-shown:font-normal " +
+  "peer-focus:top-2 peer-focus:text-[0.75rem] peer-focus:font-medium";
+
+function FloatingLabel({ name, label, required, optional, floatDown }: { name: string; label: string; required?: boolean; optional?: boolean; floatDown?: boolean }) {
+  return (
+    <label htmlFor={name} className={cx(FLOATING_LABEL, floatDown && FLOAT_DOWN_WHEN_EMPTY)}>
+      {label}
+      {required && <span className="text-error" aria-hidden>*</span>}
+      {optional && <span className="ml-1 text-[0.75rem] font-normal text-muted">Optional</span>}
+    </label>
+  );
+}
+
+function CharacterCount({ count, max }: { count: number; max: number }) {
+  return (
+    <span className={cx("ml-auto shrink-0 pt-1.5 text-[0.6875rem] tabular-nums", count > max ? "text-error" : "text-muted")} aria-live="polite">
+      {count} / {max}
+    </span>
+  );
+}
+
+/**
+ * A control in a box with its label inside. Hint, counter and error sit below
+ * the box so they never shift the label. `children` renders the control first
+ * (marked `peer` when its label should float down while empty).
+ */
 export function FloatingLabelField({
   name,
   label,
@@ -562,6 +600,9 @@ export function FloatingLabelField({
   children,
   className,
   showSuccess = false,
+  floatDown = false,
+  count,
+  maxCount,
 }: {
   name: string;
   label: string;
@@ -572,42 +613,62 @@ export function FloatingLabelField({
   children: ReactNode;
   className?: string;
   showSuccess?: boolean;
+  floatDown?: boolean;
+  count?: number;
+  maxCount?: number;
 }) {
+  const showHint = Boolean(hint) && !error;
   return (
-    <div className={cx("relative", className)}>
-      {children}
-      <AnimatePresence mode="popLayout">
-        {showSuccess && !error && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-success"
-          >
-            <CheckCircle className="size-5" aria-hidden />
-          </motion.div>
-        )}
-      </AnimatePresence>
-      <label
-        htmlFor={name}
-        className={cx(
-          "absolute left-3.5 top-1/2 -translate-y-1/2 text-[0.9375rem] text-muted pointer-events-none transition-all duration-[var(--duration-micro)] ease-[var(--ease-emphasize)]",
-          "peer-placeholder-shown:top-1/2 peer-placeholder-shown:translate-y-1/2 peer-placeholder-shown:text-[0.9375rem]",
-          "peer-focus:top-1 peer:-translate-y-full peer-focus:text-[0.75rem] peer-focus:text-brand-600 peer-focus:font-medium",
-          "peer-focus:px-1 bg-surface",
-          "peer-disabled:text-muted/50",
-          "peer-[aria-invalid=true]:peer-focus:text-error"
-        )}
-      >
-        {label}
-        {required && <span className="text-error" aria-hidden>*</span>}
-        {optional && <span className="ml-1 text-[0.75rem] font-normal text-muted">Optional</span>}
-      </label>
-      {hint && !error && <FieldHint id={getHintId(name)}>{hint}</FieldHint>}
+    <div className={className}>
+      <div className="group relative">
+        {children}
+        <FloatingLabel name={name} label={label} required={required} optional={optional} floatDown={floatDown} />
+        <AnimatePresence mode="popLayout">
+          {showSuccess && !error && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-success"
+            >
+              <CheckCircle className="size-5" aria-hidden />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+      {(showHint || maxCount) && (
+        <div className="flex items-start gap-3">
+          {showHint && <FieldHint id={getHintId(name)}>{hint}</FieldHint>}
+          {maxCount ? <CharacterCount count={count ?? 0} max={maxCount} /> : null}
+        </div>
+      )}
       <FieldError id={getErrorId(name)} message={error} />
     </div>
   );
 }
+
+function describedByFor(name: string, error?: string, hint?: ReactNode): string | undefined {
+  return error ? getErrorId(name) : hint ? getHintId(name) : undefined;
+}
+
+/** Length of a controlled value, for callers that do not pass `count`. */
+function lengthOf(value: unknown): number {
+  return typeof value === "string" ? value.length : 0;
+}
+
+type FloatingExtras = {
+  name: string;
+  label: string;
+  hint?: ReactNode;
+  error?: string;
+  required?: boolean;
+  optional?: boolean;
+  showSuccess?: boolean;
+  /** Show "count / characterCount" under the field. */
+  characterCount?: number;
+  /** Current length for the counter; needed with uncontrolled inputs (react-hook-form `register`). */
+  count?: number;
+};
 
 export function FloatingLabelInput({
   name,
@@ -617,32 +678,33 @@ export function FloatingLabelInput({
   required,
   optional,
   characterCount,
+  count,
   showSuccess = false,
+  className,
   ...props
-}: InputProps & { label: string; hint?: ReactNode; error?: string; required?: boolean; optional?: boolean; showSuccess?: boolean } & { name: string }) {
-  const describedById = error ? getErrorId(name) : hint ? getHintId(name) : "";
+}: Omit<InputHTMLAttributes<HTMLInputElement>, "name"> & FloatingExtras & { ref?: Ref<HTMLInputElement> }) {
   return (
-    <FloatingLabelField name={name} label={label} hint={hint} error={error} required={required} optional={optional} showSuccess={showSuccess}>
+    <FloatingLabelField
+      name={name}
+      label={label}
+      hint={hint}
+      error={error}
+      required={required}
+      optional={optional}
+      showSuccess={showSuccess}
+      floatDown
+      maxCount={characterCount}
+      count={count ?? lengthOf(props.value)}
+    >
       <input
         id={name}
         name={name}
         {...props}
-        className={cx(CONTROL, "mt-0 min-h-12 pt-6 pb-2 px-3.5", error ? "border-error" : undefined, props.className)}
+        className={cx(CONTROL, "peer min-h-12 px-3.5 pb-2 pt-6", className)}
         aria-invalid={!!error}
-        aria-describedby={describedById}
+        aria-describedby={describedByFor(name, error, hint)}
         placeholder=" "
       />
-      {characterCount && (
-        <div
-          className={cx(
-            "absolute bottom-1.5 right-3 text-[0.6875rem] transition-colors duration-[var(--duration-micro)]",
-            (props.value as string)?.length > (characterCount || 0) ? "text-error" : "text-muted"
-          )}
-          aria-live="polite"
-        >
-          {(props.value as string)?.length || 0} / {characterCount}
-        </div>
-      )}
     </FloatingLabelField>
   );
 }
@@ -655,31 +717,33 @@ export function FloatingLabelTextarea({
   required,
   optional,
   characterCount,
+  count,
   showSuccess = false,
+  className,
   ...props
-}: TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string; hint?: ReactNode; error?: string; required?: boolean; optional?: boolean; characterCount?: number; showSuccess?: boolean } & { name: string }) {
-  const describedById = error ? getErrorId(name) : hint ? getHintId(name) : "";
+}: Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "name"> & FloatingExtras & { ref?: Ref<HTMLTextAreaElement> }) {
   return (
-    <FloatingLabelField name={name} label={label} hint={hint} error={error} required={required} optional={optional} showSuccess={showSuccess}>
+    <FloatingLabelField
+      name={name}
+      label={label}
+      hint={hint}
+      error={error}
+      required={required}
+      optional={optional}
+      showSuccess={showSuccess}
+      floatDown
+      maxCount={characterCount}
+      count={count ?? lengthOf(props.value)}
+    >
       <textarea
         id={name}
+        name={name}
         {...props}
-        className={cx(CONTROL, "mt-0 min-h-24 resize-y pt-6 pb-2 px-3.5 leading-relaxed", error ? "border-error" : undefined, props.className)}
+        className={cx(CONTROL, "peer min-h-24 resize-y px-3.5 pb-2 pt-6 leading-relaxed", className)}
         aria-invalid={!!error}
-        aria-describedby={describedById}
+        aria-describedby={describedByFor(name, error, hint)}
         placeholder=" "
       />
-      {characterCount && (
-        <div
-          className={cx(
-            "absolute bottom-1.5 right-3 text-[0.6875rem] transition-colors duration-[var(--duration-micro)]",
-            (props.value as string)?.length > (characterCount || 0) ? "text-error" : "text-muted"
-          )}
-          aria-live="polite"
-        >
-          {(props.value as string)?.length || 0} / {characterCount}
-        </div>
-      )}
     </FloatingLabelField>
   );
 }
@@ -693,23 +757,25 @@ export function FloatingLabelSelect({
   optional,
   children,
   showSuccess = false,
+  className,
   ...props
-}: SelectHTMLAttributes<HTMLSelectElement> & { label: string; hint?: ReactNode; error?: string; required?: boolean; optional?: boolean; showSuccess?: boolean } & { name: string }) {
-  const describedById = error ? getErrorId(name) : hint ? getHintId(name) : "";
+}: Omit<SelectHTMLAttributes<HTMLSelectElement>, "name"> & Omit<FloatingExtras, "characterCount" | "count"> & { ref?: Ref<HTMLSelectElement> }) {
   return (
     <FloatingLabelField name={name} label={label} hint={hint} error={error} required={required} optional={optional} showSuccess={showSuccess}>
-      <div className="relative mt-0">
-        <select
-          id={name}
-          {...props}
-          className={cx(CONTROL, "min-h-12 pt-6 pb-2 appearance-none pr-10", error ? "border-error" : undefined, props.className)}
-          aria-invalid={!!error}
-          aria-describedby={describedById}
-        >
-          {children}
-        </select>
-        <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden />
-      </div>
+      <select
+        id={name}
+        name={name}
+        {...props}
+        className={cx(CONTROL, "min-h-12 cursor-pointer appearance-none pb-2 pl-3.5 pr-10 pt-6", className)}
+        aria-invalid={!!error}
+        aria-describedby={describedByFor(name, error, hint)}
+      >
+        {children}
+      </select>
+      <ChevronDown
+        className="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2 text-muted transition-colors group-focus-within:text-brand-600"
+        aria-hidden
+      />
     </FloatingLabelField>
   );
 }

@@ -51,7 +51,7 @@ export function UserCreateScreen() {
       </Link>
       <PageHeader title="Add a user" description="Create an account for a volunteer or another administrator." />
 
-      <form onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form method="post" onSubmit={handleSubmit(onSubmit)} noValidate>
         <Panel className="p-5 sm:p-7">
           <div className="space-y-8">
             <ServerErrors error={create.error} fieldErrors={create.fieldErrors} />

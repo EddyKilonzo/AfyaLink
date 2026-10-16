@@ -19,6 +19,7 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
       </head>
       <body>
         <main style={{ maxWidth: 420, margin: "20vh auto", padding: 16, textAlign: "center" }}>
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- next/link needs router context, which this boundary must not depend on (see above). */}
           <a href="/" style={{ display: "inline-flex", marginBottom: 24 }} aria-label="AfyaLink home">
             <span style={{ width: 32, height: 32, borderRadius: 9, background: "#0b3d35", display: "inline-block" }} />
           </a>

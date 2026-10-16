@@ -123,7 +123,7 @@ export function ReportForm({ report }: { report?: ServerReport } = {}) {
   });
 
   const values = useWatch({ control });
-  const { category, severity, latitude, longitude, notes, symptoms } = values;
+  const { category, severity, latitude, longitude, notes, symptoms, conditionName } = values;
 
   // Restore an unfinished draft from this device (create mode only).
   useEffect(() => {
@@ -239,7 +239,7 @@ export function ReportForm({ report }: { report?: ServerReport } = {}) {
   const hasGps = latitude !== undefined && longitude !== undefined && latitude !== null && longitude !== null;
 
   return (
-    <form onSubmit={handleSubmit(editing ? onCorrect : onCreate)} noValidate className="pb-28 md:pb-0">
+    <form method="post" onSubmit={handleSubmit(editing ? onCorrect : onCreate)} noValidate className="pb-28 md:pb-0">
       <div className="space-y-4">
         {submitError && <ErrorState message={submitError} />}
         {correct.error && <ErrorState message={correct.error} />}
@@ -295,9 +295,9 @@ export function ReportForm({ report }: { report?: ServerReport } = {}) {
               error={errors.conditionName?.message}
               hint="Pick a suggestion or type your own."
               characterCount={120}
+              count={(conditionName ?? "").length}
               list="condition-suggestions"
               autoComplete="off"
-              placeholder=" "
               {...register("conditionName")}
             />
             <datalist id="condition-suggestions">
@@ -334,26 +334,30 @@ export function ReportForm({ report }: { report?: ServerReport } = {}) {
             </fieldset>
 
             <div className="grid gap-5 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <label htmlFor="casesCount" className="flex items-baseline gap-1 text-sm font-semibold text-ink">
-                  Number of cases
-                  <span className="text-error" aria-hidden>*</span>
-                </label>
-                <div className="flex items-stretch overflow-hidden rounded-[10px] border border-line-strong bg-surface shadow-xs transition-[border-color,box-shadow] duration-[var(--duration-micro)] ease-[var(--ease-emphasize)] has-[:focus-within]:border-brand-500 has-[:focus-within]:shadow-[var(--shadow-glow)] has-[:focus-within]:-translate-y-[0.5px] has-[:disabled]:cursor-not-allowed has-[:disabled]:bg-sunken has-[:disabled]:text-muted">
+              <div>
+                <div className="group flex items-stretch overflow-hidden rounded-[10px] border border-line-strong bg-surface shadow-xs transition-[border-color,box-shadow] duration-[var(--duration-micro)] ease-[var(--ease-emphasize)] has-[:focus-within]:border-brand-500 has-[:focus-within]:shadow-[var(--shadow-glow)] has-[:focus-within]:-translate-y-[0.5px] has-[:disabled]:cursor-not-allowed has-[:disabled]:bg-sunken has-[:disabled]:text-muted">
                   <button type="button" onClick={() => stepCases(-1)} className="grid w-12 place-items-center text-muted transition-colors hover:bg-sunken hover:text-ink" aria-label="One fewer case">
                     <Minus className="size-4" aria-hidden />
                   </button>
-                  <input
-                    id="casesCount"
-                    type="number"
-                    inputMode="numeric"
-                    min={1}
-                    {...register("casesCount")}
-                    className="min-h-12 w-full border-x border-line bg-transparent text-center text-base font-semibold tabular-nums text-ink focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
-                    aria-invalid={!!errors.casesCount}
-                    aria-describedby={errors.casesCount ? "casesCount-error" : undefined}
-                    placeholder=" "
-                  />
+                  <div className="relative flex-1 border-x border-line">
+                    <input
+                      id="casesCount"
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      {...register("casesCount")}
+                      className="min-h-12 w-full bg-transparent pb-2 pt-6 text-center text-base font-semibold tabular-nums text-ink focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+                      aria-invalid={!!errors.casesCount}
+                      aria-describedby={errors.casesCount ? "casesCount-error" : undefined}
+                    />
+                    <label
+                      htmlFor="casesCount"
+                      className="pointer-events-none absolute inset-x-0 top-2 flex justify-center gap-0.5 text-[0.75rem] font-medium leading-4 text-muted transition-colors group-focus-within:text-brand-600 group-has-[[aria-invalid=true]]:text-error"
+                    >
+                      Number of cases
+                      <span className="text-error" aria-hidden>*</span>
+                    </label>
+                  </div>
                   <button type="button" onClick={() => stepCases(1)} className="grid w-12 place-items-center text-muted transition-colors hover:bg-sunken hover:text-ink" aria-label="One more case">
                     <Plus className="size-4" aria-hidden />
                   </button>
@@ -378,7 +382,6 @@ export function ReportForm({ report }: { report?: ServerReport } = {}) {
                 error={errors.observedAt?.message}
                 type="datetime-local"
                 max={localDateTimeNow()}
-                placeholder=" "
                 {...register("observedAt")}
               />
               <FloatingLabelSelect
@@ -440,34 +443,28 @@ export function ReportForm({ report }: { report?: ServerReport } = {}) {
             </div>
           </FormSection>
 
-<FormSection title="Details" description="Optional, but helpful for whoever reviews the report.">
+          <FormSection title="Details" description="Optional, but helpful for whoever reviews the report.">
             <FloatingLabelInput
               label="Symptoms"
               optional
               hint="Separate with commas, e.g. fever, cough"
               error={errors.symptoms?.message}
               characterCount={600}
-              placeholder=" "
+              count={(symptoms ?? "").length}
               {...register("symptoms")}
             />
-            <p id="notes-privacy" className="mt-1.5 flex items-start gap-1.5 text-[0.8125rem] text-muted">
-              <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-brand-600" aria-hidden />
-              Don&apos;t include names, phone numbers or ID numbers.
-              <span className="ml-auto shrink-0 tabular-nums">{(symptoms ?? "").length}/600</span>
-            </p>
             <FloatingLabelTextarea
               label="Notes"
               optional
               error={errors.notes?.message}
               characterCount={2000}
+              count={(notes ?? "").length}
               rows={3}
-              placeholder=" "
               {...register("notes")}
             />
-            <p id="notes-privacy-2" className="mt-1.5 flex items-start gap-1.5 text-[0.8125rem] text-muted">
+            <p id="notes-privacy" className="flex items-start gap-1.5 text-[0.8125rem] text-muted">
               <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-brand-600" aria-hidden />
-              Don&apos;t include names, phone numbers or ID numbers.
-              <span className="ml-auto shrink-0 tabular-nums">{(notes ?? "").length}/2000</span>
+              Don&apos;t include names, phone numbers or ID numbers in symptoms or notes.
             </p>
           </FormSection>
         </div>

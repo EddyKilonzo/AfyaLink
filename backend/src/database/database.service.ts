@@ -12,6 +12,8 @@ import type { AppConfig } from '../config/configuration.js';
 export type DatabaseState = 'not_configured' | 'connecting' | 'connected' | 'unavailable';
 
 const RETRY_INTERVAL_MS = 15_000;
+/** How long a liveness probe result is reused, so frequent health checks stay cheap. */
+const PING_TTL_MS = 5_000;
 
 /**
  * Owns the database connection lifecycle. The TypeORM DataSource is created with
@@ -24,6 +26,8 @@ export class DatabaseService implements OnApplicationBootstrap, OnApplicationShu
   private readonly logger = new Logger(DatabaseService.name);
   private state: DatabaseState;
   private retryTimer: NodeJS.Timeout | null = null;
+  private lastPing: { at: number; ok: boolean } | null = null;
+  private pinging: Promise<boolean> | null = null;
 
   constructor(
     private readonly dataSource: DataSource,
@@ -44,6 +48,7 @@ export class DatabaseService implements OnApplicationBootstrap, OnApplicationShu
       );
       return;
     }
+    this.state = 'connecting';
     void this.connect();
   }
 
@@ -62,6 +67,28 @@ export class DatabaseService implements OnApplicationBootstrap, OnApplicationShu
     // endpoint can never report "connecting" after the constructor has run.
     if (this.dataSource.isInitialized) return 'connected';
     return this.state;
+  }
+
+  /**
+   * Live status for /api/health. `isInitialized` stays true after the server
+   * goes away (the pool just fails its next query), so once connected this
+   * runs a cheap `SELECT 1`, reusing the result for a few seconds.
+   */
+  async liveStatus(): Promise<DatabaseState> {
+    if (!this.dataSource.isInitialized) return this.state;
+    if (this.lastPing && Date.now() - this.lastPing.at < PING_TTL_MS) {
+      return this.lastPing.ok ? 'connected' : 'unavailable';
+    }
+    this.pinging ??= this.dataSource
+      .query('SELECT 1')
+      .then(() => true)
+      .catch(() => false)
+      .then((ok) => {
+        this.lastPing = { at: Date.now(), ok };
+        this.pinging = null;
+        return ok;
+      });
+    return (await this.pinging) ? 'connected' : 'unavailable';
   }
 
   get isReady(): boolean {

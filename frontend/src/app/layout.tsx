@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Geist } from "next/font/google";
 import { PageTexture } from "@/components/brand/hex-texture";
+import { THEME_BOOTSTRAP_SCRIPT } from "@/components/theme/bootstrap";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -28,7 +29,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${geist.variable} antialiased`}>
+    // The bootstrap script may add `dark` to <html> before React hydrates.
+    <html lang="en" className={`${geist.variable} antialiased`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
+      </head>
       {/* Browser extensions (e.g. Grammarly) add attributes to <body>; ignore those mismatches only. */}
       <body className="min-h-dvh" suppressHydrationWarning>
         <noscript>

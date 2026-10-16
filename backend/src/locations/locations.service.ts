@@ -1,7 +1,7 @@
 import { ConflictException, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { errorCode, toHttpException } from '../common/errors/handle-error.js';
+import { isUniqueViolation, toHttpException } from '../common/errors/handle-error.js';
 import { DatabaseService } from '../database/database.service.js';
 import { Location } from '../database/entities/location.entity.js';
 import type { CreateLocationDto } from './dto/create-location.dto.js';
@@ -44,7 +44,7 @@ export class LocationsService {
         const id = Number(result.identifiers[0]?.id);
         return await this.locations.findOneOrFail({ where: { id } });
       } catch (error) {
-        if (errorCode(error) === 'ER_DUP_ENTRY') throw new ConflictException('This location already exists.');
+        if (isUniqueViolation(error)) throw new ConflictException('This location already exists.');
         throw error;
       }
     } catch (error) {

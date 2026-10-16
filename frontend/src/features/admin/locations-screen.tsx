@@ -209,7 +209,7 @@ function AddLocationDialog({ open, onClose, onCreated }: { open: boolean; onClos
 
   return (
     <Dialog open={open} onClose={onClose} title="Add a location" description="Administrative units must be unique." size="md">
-      <form id="add-location" onSubmit={onSubmit} className="grid gap-4">
+      <form method="post" id="add-location" onSubmit={onSubmit} className="grid gap-4">
         <ServerErrors error={create.error} fieldErrors={create.fieldErrors} />
         <FormFields form={form} setForm={setForm} />
         <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
@@ -261,7 +261,7 @@ function EditLocationDialog({
 
   return (
     <Dialog open={!!location} onClose={onClose} title="Edit location" description="Administrative units must stay unique." size="md">
-      <form id="edit-location" onSubmit={onSubmit} className="grid gap-4">
+      <form method="post" id="edit-location" onSubmit={onSubmit} className="grid gap-4">
         <ServerErrors error={update.error} fieldErrors={update.fieldErrors} />
         <FormFields form={form} setForm={setForm} />
         <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">

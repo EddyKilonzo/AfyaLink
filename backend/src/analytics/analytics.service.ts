@@ -64,10 +64,18 @@ export class AnalyticsService {
   private async buildSummary(user: SessionUser, days: number) {
     this.db.assertReady();
     const since = new Date(Date.now() - days * DAY_MS);
+    const previousSince = new Date(since.getTime() - days * DAY_MS);
     const scoped = () => this.scoped(user, since);
 
-    const [totals, byCategory, bySeverity, byDay, topConditions, byStatus, byCounty] = await Promise.all([
+    // Same-length window just before this one, for "vs previous period" trends.
+    const previous = this.scoped(user, previousSince).andWhere('r.observedAt < :since', { since });
+
+    const [totals, previousTotals, byCategory, bySeverity, byDay, topConditions, byStatus, byCounty] = await Promise.all([
       scoped()
+        .select('COUNT(*)', 'reports')
+        .addSelect('COALESCE(SUM(r.casesCount), 0)', 'cases')
+        .getRawOne<{ reports: string; cases: string }>(),
+      previous
         .select('COUNT(*)', 'reports')
         .addSelect('COALESCE(SUM(r.casesCount), 0)', 'cases')
         .getRawOne<{ reports: string; cases: string }>(),
@@ -115,6 +123,7 @@ export class AnalyticsService {
       periodDays: days,
       since: since.toISOString(),
       totals: { reports: Number(totals?.reports ?? 0), cases: Number(totals?.cases ?? 0) },
+      previousTotals: { reports: Number(previousTotals?.reports ?? 0), cases: Number(previousTotals?.cases ?? 0) },
       byCategory: byCategory.map((r) => ({ category: r.category, count: Number(r.count) })),
       bySeverity: bySeverity.map((r) => ({ severity: r.severity, count: Number(r.count) })),
       byStatus: statusCounts,

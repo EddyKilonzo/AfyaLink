@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Runs the HTTP test suite (backend/test/http/*.http) against a real API and MySQL.
+ * Runs the HTTP test suite (backend/test/http/*.http) against a real API and
+ * database (PostgreSQL or MySQL, from DB_DIALECT or the DATABASE_URL scheme).
  *
  *   npm run test:http          (run `npm run build` first, or use `npm run test:http:build`)
  *
@@ -25,6 +26,7 @@ import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { parseEnv } from 'node:util';
 import mysql from 'mysql2/promise';
+import pg from 'pg';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const backendDir = path.resolve(here, '..');
@@ -44,20 +46,25 @@ async function loadEnv() {
 /** Resolves connection settings and points them at the test database. */
 function testDbSettings() {
   const env = process.env;
+  const fromScheme = env.DATABASE_URL && /^postgres(?:ql)?:/.test(env.DATABASE_URL) ? 'postgres' : null;
+  const dialect = (env.DB_DIALECT || fromScheme || 'mysql').toLowerCase() === 'postgres' ? 'postgres' : 'mysql';
+  const defaultPort = dialect === 'postgres' ? 5432 : 3306;
   let settings;
   if (env.DATABASE_URL) {
     const url = new URL(env.DATABASE_URL);
     settings = {
+      dialect,
       host: url.hostname,
-      port: Number(url.port || 3306),
+      port: Number(url.port || defaultPort),
       user: decodeURIComponent(url.username),
       password: decodeURIComponent(url.password),
       database: decodeURIComponent(url.pathname.replace(/^\//, '')),
     };
   } else {
     settings = {
+      dialect,
       host: env.DB_HOST,
-      port: Number(env.DB_PORT ?? 3306),
+      port: Number(env.DB_PORT ?? defaultPort),
       user: env.DB_USER,
       password: env.DB_PASSWORD ?? '',
       database: env.DB_NAME ?? 'afyalink',
@@ -73,7 +80,20 @@ function testDbSettings() {
 }
 
 async function recreateDatabase(settings) {
-  const conn = await mysql.createConnection({ ...settings, database: undefined });
+  if (settings.dialect === 'postgres') {
+    const { dialect: _dialect, ...conn } = settings;
+    const client = new pg.Client({ ...conn, database: 'postgres', ssl: false });
+    await client.connect();
+    try {
+      await client.query(`DROP DATABASE IF EXISTS "${settings.database}" WITH (FORCE)`);
+      await client.query(`CREATE DATABASE "${settings.database}" ENCODING 'UTF8'`);
+    } finally {
+      await client.end();
+    }
+    return;
+  }
+  const { dialect: _dialect, ...mysqlSettings } = settings;
+  const conn = await mysql.createConnection({ ...mysqlSettings, database: undefined });
   try {
     await conn.query(`DROP DATABASE IF EXISTS \`${settings.database}\``);
     await conn.query(
@@ -123,6 +143,7 @@ async function main() {
     NODE_ENV: 'test',
     PORT: port,
     DATABASE_URL: '',
+    DB_DIALECT: db.dialect,
     DB_HOST: db.host,
     DB_PORT: String(db.port),
     DB_USER: db.user,

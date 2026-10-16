@@ -88,7 +88,7 @@ function ChangePasswordSection() {
 
   return (
     <Section icon={<KeyRound className="size-5" aria-hidden />} title="Password" description="Changing it signs you out on every other device.">
-      <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid gap-4">
+      <form method="post" onSubmit={handleSubmit(onSubmit)} noValidate className="grid gap-4">
         <ServerErrors error={change.error} fieldErrors={change.fieldErrors} />
         <Field name="currentPassword" label="Current password" error={errors.currentPassword?.message}>
           <Input

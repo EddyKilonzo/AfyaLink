@@ -162,6 +162,8 @@ export interface AnalyticsSummary {
   periodDays: number;
   since: string;
   totals: { reports: number; cases: number };
+  /** Same-length window immediately before `since`, for trend deltas. */
+  previousTotals: { reports: number; cases: number };
   byCategory: { category: ReportCategory; count: number }[];
   bySeverity: { severity: ReportSeverity; count: number }[];
   byDay: { day: string; count: number }[];

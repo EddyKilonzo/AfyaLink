@@ -9,7 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, MoreThanOrEqual, Repository, type SelectQueryBuilder } from 'typeorm';
 import type { SessionUser } from '../common/decorators/auth.decorators.js';
 import { paginate, type Paginated } from '../common/dto/pagination.dto.js';
-import { errorCode, toHttpException } from '../common/errors/handle-error.js';
+import { isUniqueViolation, toHttpException } from '../common/errors/handle-error.js';
 import { DatabaseService } from '../database/database.service.js';
 import { HealthReport, ReportStatus } from '../database/entities/health-report.entity.js';
 import { Location } from '../database/entities/location.entity.js';
@@ -116,7 +116,7 @@ export class ReportsService {
         await this.reports.insert(entity);
       } catch (error) {
         // Two concurrent retries can both pass the lookup; the primary key decides.
-        if (errorCode(error) !== 'ER_DUP_ENTRY') throw error;
+        if (!isUniqueViolation(error)) throw error;
         const winner = await this.reports.findOneOrFail({ where: { id: dto.id } });
         return this.resolveExisting(user, winner);
       }
@@ -251,7 +251,8 @@ export class ReportsService {
       throw new BadRequestException('"from" must not be later than "to".');
     }
     this.db.assertReady();
-    const qb = this.reports.createQueryBuilder('r').orderBy('r.observedAt', 'DESC');
+    // `id` breaks ties so pages never repeat or skip reports with equal timestamps.
+    const qb = this.reports.createQueryBuilder('r').orderBy('r.observedAt', 'DESC').addOrderBy('r.id', 'DESC');
     if (user.role !== UserRole.ADMIN) qb.andWhere('r.chvId = :chvId', { chvId: user.id });
     else if (query.chvId) qb.andWhere('r.chvId = :chvId', { chvId: query.chvId });
     if (query.category) qb.andWhere('r.category = :category', { category: query.category });

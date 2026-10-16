@@ -56,7 +56,10 @@ export default function LocationPickerMap(props: LocationPickerMapProps) {
           eventHandlers={{ loading: () => setTilesLoading(true), load: () => setTilesLoading(false) }}
         />
         {latitude !== undefined && longitude !== undefined && (
-          <Marker position={[latitude, longitude]} icon={BRANDED_PIN} />
+          <>
+            <Marker position={[latitude, longitude]} icon={BRANDED_PIN} />
+            <FollowPin latitude={latitude} longitude={longitude} />
+          </>
         )}
         <Pinner onPick={onPick} />
       </MapContainer>
@@ -69,6 +72,19 @@ export default function LocationPickerMap(props: LocationPickerMapProps) {
       )}
     </div>
   );
+}
+
+/** MapContainer only reads `center` on mount, so a pin set from outside the
+ * map (e.g. "Use my location") would land off-screen. Bring it into view and
+ * zoom to street level; taps on the map are already visible, so they never move it. */
+function FollowPin({ latitude, longitude }: { latitude: number; longitude: number }) {
+  const map = useMap();
+  useEffect(() => {
+    const target = L.latLng(latitude, longitude);
+    if (map.getBounds().contains(target)) return;
+    map.flyTo(target, Math.max(map.getZoom(), 16), { duration: 0.8 });
+  }, [map, latitude, longitude]);
+  return null;
 }
 
 /** Drops a pin wherever the user taps — or at the centre on Enter/Space, so

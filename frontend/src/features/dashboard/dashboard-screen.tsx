@@ -12,7 +12,9 @@ import { HexTexture } from "@/components/brand/hex-texture";
 import { useSyncSummary } from "@/components/shell/sync-status";
 import { Button, ButtonLink, EmptyState, ErrorState, LoadingState, Panel, PanelHeader, Skeleton, StatCard } from "@/components/ui";
 import { Segmented } from "@/components/ui/segmented";
-import { DailyReportsChart } from "@/features/analytics/charts";
+import { DailyReportsChart, RankedBarChart } from "@/features/analytics/charts";
+import { SEVERITY_RAMP } from "@/features/analytics/colors";
+import { ProportionBar, Sparkline, TrendBadge } from "@/features/analytics/insights";
 import { useAnalyticsSummary, useMapPoints } from "@/features/analytics/hooks";
 import { HeatmapMap, HeatLegend } from "@/features/analytics/heatmap-layer";
 import { useAuth } from "@/features/auth/auth-context";
@@ -20,6 +22,7 @@ import { useReportsFeed } from "@/features/reports/hooks";
 import { ReportRow } from "@/features/reports/report-row";
 import { useSync } from "@/features/sync/sync-context";
 import { formatRelative, greeting, plural } from "@/lib/format";
+import { CATEGORY_LABELS, REPORT_SEVERITIES, SEVERITY_LABELS } from "@/types";
 
 const PERIODS = [
   { value: 7, label: "7 days" },
@@ -59,8 +62,27 @@ export function DashboardScreen() {
           <Segmented label="Period" size="sm" value={days} onChange={setDays} options={PERIODS} />
         </div>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <StatCard label="Reports received" value={summary.data?.totals.reports ?? null} icon={FileText} hint={`Last ${days} days, on the server`} />
-          <StatCard label="Cases recorded" value={summary.data?.totals.cases ?? null} icon={Activity} hint={`Last ${days} days`} />
+          <StatCard
+            label="Reports received"
+            value={summary.data?.totals.reports ?? null}
+            icon={FileText}
+            hint={`Last ${days} days, on the server`}
+            footer={
+              summary.data && (
+                <>
+                  <TrendBadge current={summary.data.totals.reports} previous={summary.data.previousTotals?.reports} days={days} />
+                  <Sparkline byDay={summary.data.byDay} since={summary.data.since} days={summary.data.periodDays} />
+                </>
+              )
+            }
+          />
+          <StatCard
+            label="Cases recorded"
+            value={summary.data?.totals.cases ?? null}
+            icon={Activity}
+            hint={`Last ${days} days`}
+            footer={summary.data && <TrendBadge current={summary.data.totals.cases} previous={summary.data.previousTotals?.cases} days={days} />}
+          />
           <StatCard label="Waiting to sync" value={waiting} icon={Clock} tone={waiting ? "amber" : "default"} hint="On this device" />
           <StatCard
             label="Not sent"
@@ -85,6 +107,42 @@ export function DashboardScreen() {
           </div>
         </Panel>
         <MiniMap />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Panel>
+          <PanelHeader title="Severity mix" description={`How serious your reports were, last ${days} days`} />
+          <div className="px-4 pb-5 pt-5 sm:px-5">
+            {summary.data ? (
+              <ProportionBar
+                ariaLabel="Your reports by severity"
+                unit="report"
+                segments={REPORT_SEVERITIES.map((sev) => ({
+                  key: sev,
+                  label: SEVERITY_LABELS[sev],
+                  value: summary.data?.bySeverity.find((b) => b.severity === sev)?.count ?? 0,
+                  color: SEVERITY_RAMP[sev],
+                }))}
+              />
+            ) : (
+              <Skeleton className="h-24 w-full rounded-xl" />
+            )}
+          </div>
+        </Panel>
+        <Panel>
+          <PanelHeader title="What you reported" description={`Reports by category, last ${days} days`} />
+          <div className="px-3 pb-4 pt-4 sm:px-5">
+            {summary.data ? (
+              summary.data.byCategory.length ? (
+                <RankedBarChart ariaLabel="Your reports by category" valueName="Reports" data={summary.data.byCategory.map((c) => ({ label: CATEGORY_LABELS[c.category], value: c.count }))} />
+              ) : (
+                <p className="py-6 text-center text-sm text-muted">No reports in this period.</p>
+              )
+            ) : (
+              <Skeleton className="h-32 w-full rounded-xl" />
+            )}
+          </div>
+        </Panel>
       </div>
 
       <RecentReports />

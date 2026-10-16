@@ -8,10 +8,16 @@
  * text). Sync and severity colours are reserved for state and always ship with
  * an icon and a text label. All text pairs below meet WCAG AA.
  */
+/* Fonts are `inline` because they reference --font-geist from next/font. */
 @theme inline {
   --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+}
 
+/* Not `inline`: utilities must reference these variables (bg-surface ->
+   var(--color-surface)) so the `.dark` overrides below actually apply. With
+   `inline`, Tailwind bakes the light values into every utility. */
+@theme {
   /* Surfaces & ink */
   --color-canvas: #f7f9f7;
   --color-surface: #ffffff;
@@ -123,6 +129,24 @@
 
 :root {
   color-scheme: light;
+
+  /* Chart roles (Recharts / inline SVG). Validated with the dataviz palette
+     checker against #ffffff (light) and #12211c (dark); dark values below are
+     their own steps, not a flip. */
+  --chart-mark: #0b8f72;
+  --chart-grid: var(--color-line);
+  --chart-ink: var(--color-ink);
+  --chart-muted: var(--color-muted);
+  --chart-cursor: rgb(20 108 90 / 0.07);
+  /* Severity, an ordered scale: one hue, more salient as severity rises. */
+  --chart-sev-1: #e99560;
+  --chart-sev-2: #d4682c;
+  --chart-sev-3: #ad3d17;
+  --chart-sev-4: #74200d;
+  /* Review pipeline (Submitted -> Reviewed -> Actioned), ordered. */
+  --chart-step-1: #5fb998;
+  --chart-step-2: #2a8f72;
+  --chart-step-3: #0f5245;
 }
 
 /* ---------- Dark mode ---------- */
@@ -178,6 +202,52 @@
   --color-brand-50: #0f1c18;
   --color-brand-100: #153029;
   --color-brand-200: #1c4a3f;
+
+  /* State tints: dark backgrounds with light text (each pair >= 4.5:1). */
+  --color-amber-soft: #3a2a12;
+  --color-amber-ink: #f3c98a;
+  --color-pending: #f3c98a;
+  --color-pending-bg: #3a2a12;
+  --color-syncing: #9cc4ee;
+  --color-syncing-bg: #16293d;
+  --color-synced: #86d9b2;
+  --color-synced-bg: #153029;
+  --color-failed: #f2a5ac;
+  --color-failed-bg: #3a1a1e;
+
+  --chart-mark: #26a882;
+  --chart-cursor: rgb(143 214 185 / 0.08);
+  --chart-sev-1: #a03c1b;
+  --chart-sev-2: #cc5a2c;
+  --chart-sev-3: #e8854e;
+  --chart-sev-4: #f6bd92;
+  --chart-step-1: #1d5e4e;
+  --chart-step-2: #2f9e7e;
+  --chart-step-3: #8fd6b9;
+}
+
+/* The dark end of the brand ramp doubles as text colour on light tints and as
+   a surface colour, so the tokens stay put; only brand *text* is lifted so it
+   keeps AA contrast on dark surfaces. */
+.dark .text-brand-600 {
+  color: var(--color-brand-400);
+}
+.dark :is(.text-brand-700, .text-brand-800) {
+  color: var(--color-brand-300);
+}
+.dark :is(.text-brand-900, .text-brand-950):not(.bg-white) {
+  color: var(--color-ink);
+}
+/* brand-50..200 swap to dark tints as *surfaces*; as text they sit on deep
+   green brand panels and must stay light. */
+.dark .text-brand-50 {
+  color: #eef9f3;
+}
+.dark .text-brand-100 {
+  color: #ddf5ea;
+}
+.dark .text-brand-200 {
+  color: #b7e6d1;
 }
 
 html {
@@ -673,6 +743,12 @@ body {
 
 .leaflet-control-zoom a {
   color: var(--color-ink) !important;
+  /* Leaflet paints its own white; follow the theme so +/- stay visible in dark mode. */
+  background-color: var(--color-surface) !important;
+  border-color: var(--color-line) !important;
+}
+.leaflet-control-zoom a:hover {
+  background-color: var(--color-sunken) !important;
 }
 
 /* Page-load entrance that needs no JavaScript (used above the fold). */

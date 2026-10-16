@@ -12,6 +12,9 @@ describe('AfyaLink API (e2e, no database)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
+    // DATABASE_URL too: the root .env sets it, and it takes precedence over DB_*,
+    // so without this the "no database" suite would connect to the real database.
+    process.env.DATABASE_URL = '';
     process.env.DB_HOST = '';
     process.env.DB_NAME = '';
     process.env.DB_USER = '';

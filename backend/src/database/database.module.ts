@@ -34,8 +34,14 @@ export const ENTITIES = [User, Location, HealthReport, SyncLog, AuditLog, Revoke
           logging: false,
           timezone: 'Z',
           ...(isPostgres
-            ? { ssl: { rejectUnauthorized: false } }
+            ? { ssl: db.ssl === 'off' ? false : { rejectUnauthorized: db.ssl === 'verify' } }
             : { charset: 'utf8mb4' }),
+          // Fail fast when the database is unreachable instead of hanging the
+          // request; idle connections are recycled before serverless proxies
+          // (e.g. Neon's pooler) drop them.
+          extra: isPostgres
+            ? { max: 10, connectionTimeoutMillis: 5_000, idleTimeoutMillis: 30_000 }
+            : { connectionLimit: 10, connectTimeout: 5_000 },
           manualInitialization: true,
         };
       },

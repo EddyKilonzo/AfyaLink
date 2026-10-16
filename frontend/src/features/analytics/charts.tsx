@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Bar, BarChart, CartesianGrid, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis, type TooltipContentProps, Cell } from "recharts";
-import { CHART_GRID, CHART_INK, CHART_MARK, CHART_MUTED } from "./colors";
+import { useEffect, useMemo, useState } from "react";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, type TooltipContentProps } from "recharts";
+import { CHART_CURSOR, CHART_GRID, CHART_MARK, CHART_MUTED } from "./colors";
 
 /**
  * Single-series charts. No legend box: the panel title names the measure.
@@ -43,40 +43,6 @@ function useAnimateOnce(): boolean {
   return animate;
 }
 
-/** Hook for staggered bar entrance animation using CSS-based approach */
-function useStaggeredAnimation(itemCount: number, delay: number = 80): number[] {
-  const [visibleIndices, setVisibleIndices] = useState<number[]>([]);
-  const animationRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const initializedRef = useRef(false);
-
-  useEffect(() => {
-    // Clear any existing timeouts
-    animationRef.current.forEach(clearTimeout);
-    animationRef.current = [];
-
-    // Only set initial state on first run
-    if (!initializedRef.current) {
-      initializedRef.current = true;
-      setVisibleIndices([]);
-    } else {
-      setVisibleIndices([]);
-    }
-
-    for (let i = 0; i < itemCount; i++) {
-      const timeout = setTimeout(() => {
-        setVisibleIndices(prev => [...prev, i]);
-      }, i * delay);
-      animationRef.current.push(timeout);
-    }
-
-    return () => {
-      animationRef.current.forEach(clearTimeout);
-    };
-  }, [itemCount, delay]);
-
-  return visibleIndices;
-}
-
 function ChartTooltip({ active, payload, label, unit, labelFormat }: Partial<TooltipContentProps<number, string>> & { unit: string; labelFormat?: (l: string) => string }) {
   if (!active || !payload?.length) return null;
   const value = Number(payload[0]?.value ?? 0);
@@ -107,7 +73,6 @@ export function DailyReportsChart({
   const data = useMemo(() => fillDays(byDay, since, days), [byDay, since, days]);
   const animate = useAnimateOnce();
   const format = compact ? weekday : shortDate;
-  const visibleIndices = useStaggeredAnimation(data.length, compact ? 60 : 80);
   
   return (
     <div role="img" aria-label={`Reports per day over the last ${days} days`} className="w-full" style={{ height }}>
@@ -116,7 +81,7 @@ export function DailyReportsChart({
           <CartesianGrid vertical={false} stroke={CHART_GRID} />
           <XAxis dataKey="day" tickFormatter={format} tick={AXIS_TICK} tickLine={false} axisLine={{ stroke: CHART_GRID }} minTickGap={compact ? 4 : 24} />
           <YAxis allowDecimals={false} tick={AXIS_TICK} tickLine={false} axisLine={false} width={40} />
-          <Tooltip cursor={{ fill: "rgb(20 108 90 / 0.06)", radius: 6 }} content={<ChartTooltip unit="report" labelFormat={shortDate} />} />
+          <Tooltip cursor={{ fill: CHART_CURSOR, radius: 6 }} content={<ChartTooltip unit="report" labelFormat={shortDate} />} />
           <Bar
             dataKey="count"
             fill={CHART_MARK}
@@ -125,32 +90,9 @@ export function DailyReportsChart({
             isAnimationActive={animate}
             animationDuration={700}
             animationEasing="ease-out"
-          >
-            {data.map((_, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={visibleIndices.includes(index) ? CHART_MARK : "transparent"}
-                className={visibleIndices.includes(index) ? "animate-bar-grow" : ""}
-              />
-            ))}
-          </Bar>
+          />
         </BarChart>
       </ResponsiveContainer>
-      <style jsx>{`
-        .animate-bar-grow {
-          animation: barGrow 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-        }
-        @keyframes barGrow {
-          from {
-            transform: scaleY(0);
-            transform-origin: bottom;
-          }
-          to {
-            transform: scaleY(1);
-            transform-origin: bottom;
-          }
-        }
-      `}</style>
     </div>
   );
 }
@@ -160,47 +102,41 @@ export interface RankedDatum {
   value: number;
 }
 
-/** Horizontal bars, largest first, value at each bar's tip. For up to ~8 rows. */
+/**
+ * Horizontal bars, largest first, value printed at each bar's end. Plain HTML
+ * rather than Recharts: values always render, long labels wrap instead of
+ * clipping, and the colours come straight from the theme tokens. Up to 8 rows.
+ */
 export function RankedBarChart({ data, valueName, ariaLabel }: { data: RankedDatum[]; valueName: string; ariaLabel: string }) {
   const rows = useMemo(() => [...data].sort((a, b) => b.value - a.value).slice(0, 8), [data]);
-  const animate = useAnimateOnce();
-  const visibleIndices = useStaggeredAnimation(rows.length, 70);
-  const height = rows.length * 34 + 12;
-  
+  const max = Math.max(1, ...rows.map((r) => r.value));
+  // Grow from zero once mounted; the transition is disabled under reduced motion by globals.css.
+  const [grown, setGrown] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setGrown(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+  const unit = valueName.toLowerCase();
+
   return (
-    <div role="img" aria-label={ariaLabel} className="w-full" style={{ height }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={rows} layout="vertical" margin={{ top: 2, right: 40, bottom: 2, left: 0 }} barCategoryGap={9}>
-          <XAxis type="number" hide allowDecimals={false} />
-          <YAxis type="category" dataKey="label" tick={{ ...AXIS_TICK, fill: CHART_INK }} tickLine={false} axisLine={false} width={124} />
-          <Tooltip cursor={{ fill: "rgb(20 108 90 / 0.06)", radius: 6 }} content={<ChartTooltip unit={valueName.toLowerCase().replace(/s$/, "")} />} />
-          <Bar dataKey="value" fill={CHART_MARK} radius={[0, 5, 5, 0]} maxBarSize={16} isAnimationActive={animate} animationDuration={700}>
-            {rows.map((_, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={visibleIndices.includes(index) ? CHART_MARK : "transparent"}
-                className={visibleIndices.includes(index) ? "animate-bar-grow-horizontal" : ""}
+    <ul aria-label={ariaLabel} className="space-y-2.5">
+      {rows.map((r) => (
+        <li key={r.label} className="grid grid-cols-[minmax(0,8rem)_1fr] items-center gap-3 sm:grid-cols-[minmax(0,10rem)_1fr]">
+          <span className="text-[0.8125rem] leading-tight text-ink [overflow-wrap:anywhere]">{r.label}</span>
+          <span className="flex items-center gap-2" title={`${r.label}: ${r.value.toLocaleString()} ${unit}`}>
+            <span className="h-3.5 min-w-0 flex-1">
+              <span
+                className="block h-full rounded-r-[5px] rounded-l-[2px] transition-[width] duration-700 ease-[var(--ease-out)]"
+                style={{ width: grown ? `${Math.max(2, (r.value / max) * 100)}%` : "0%", background: CHART_MARK }}
               />
-            ))}
-            <LabelList dataKey="value" position="right" fill={CHART_INK} fontSize={12} fontWeight={600} dx={8} />
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-      <style jsx>{`
-        .animate-bar-grow-horizontal {
-          animation: barGrowHorizontal 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-        }
-        @keyframes barGrowHorizontal {
-          from {
-            transform: scaleX(0);
-            transform-origin: left;
-          }
-          to {
-            transform: scaleX(1);
-            transform-origin: left;
-          }
-        }
-      `}</style>
-    </div>
+            </span>
+            <span className="w-8 shrink-0 text-right text-xs font-semibold tabular-nums text-ink">
+              {r.value.toLocaleString()}
+              <span className="sr-only"> {unit}</span>
+            </span>
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }

@@ -99,10 +99,13 @@ export function StatCard({
   icon: Icon,
   tone = "default",
   className,
+  footer,
 }: {
   label: string;
   value: number | string | null | undefined;
   hint?: ReactNode;
+  /** Extra content under the hint, e.g. a trend badge or sparkline. */
+  footer?: ReactNode;
   icon?: LucideIcon;
   tone?: "default" | "brand" | "amber" | "error";
   className?: string;
@@ -133,6 +136,7 @@ export function StatCard({
         )}
       </p>
       {hint && <p className="mt-1.5 text-xs text-muted">{hint}</p>}
+      {footer && <div className="mt-3 space-y-2">{footer}</div>}
     </div>
   );
 }

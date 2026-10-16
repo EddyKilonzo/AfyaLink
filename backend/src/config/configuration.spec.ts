@@ -52,6 +52,27 @@ describe('loadConfiguration', () => {
     expect(loadConfiguration().auth.mfaKey).toHaveLength(32);
   });
 
+  describe('database TLS', () => {
+    const dev = { NODE_ENV: 'development', SESSION_SECRET: 's'.repeat(48), DB_SSL: '', DATABASE_URL: '', DB_HOST: '' };
+    const ssl = (env: Record<string, string>) => {
+      Object.assign(process.env, dev, env);
+      return loadConfiguration().db.ssl;
+    };
+
+    it('verifies certificates for remote servers and skips TLS for local ones by default', () => {
+      expect(ssl({ DATABASE_URL: 'postgresql://u:p@ep-x.neon.tech/db' })).toBe('verify');
+      expect(ssl({ DATABASE_URL: 'postgresql://u:p@127.0.0.1:5433/db' })).toBe('off');
+      expect(ssl({ DB_DIALECT: 'postgres', DB_HOST: 'localhost', DB_USER: 'u', DB_NAME: 'db' })).toBe('off');
+    });
+
+    it('follows sslmode in the URL, and DB_SSL over both', () => {
+      expect(ssl({ DATABASE_URL: 'postgresql://u:p@ep-x.neon.tech/db?sslmode=require' })).toBe('verify');
+      expect(ssl({ DATABASE_URL: 'postgresql://u:p@ep-x.neon.tech/db?sslmode=disable' })).toBe('off');
+      expect(ssl({ DATABASE_URL: 'postgresql://u:p@ep-x.neon.tech/db?sslmode=require', DB_SSL: 'no-verify' })).toBe('no-verify');
+      expect(() => ssl({ DB_SSL: 'sometimes' })).toThrow(/DB_SSL/);
+    });
+  });
+
   describe('mail', () => {
     const dev = { NODE_ENV: 'development', SESSION_SECRET: 's'.repeat(48) };
     const clearMail = { MAIL_TRANSPORT: '', SMTP_HOST: '', SMTP_USER: '', SMTP_PASSWORD: '', MAIL_FROM: '', APP_URL: '' };

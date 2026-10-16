@@ -14,12 +14,12 @@ export class HealthController {
   @Public()
   @SkipThrottle()
   @Get()
-  check() {
+  async check() {
     try {
       return {
         status: 'ok',
         service: 'afyalink-backend',
-        database: this.db.status,
+        database: await this.db.liveStatus(),
         uptimeSeconds: Math.round(process.uptime()),
         timestamp: new Date().toISOString(),
       };
@@ -32,10 +32,11 @@ export class HealthController {
   @Public()
   @SkipThrottle()
   @Get('ready')
-  ready() {
-    if (this.db.status !== 'connected') {
-      throw new ServiceUnavailableException(`Database is ${this.db.status.replace('_', ' ')}.`);
+  async ready() {
+    const status = await this.db.liveStatus();
+    if (status !== 'connected') {
+      throw new ServiceUnavailableException(`Database is ${status.replace('_', ' ')}.`);
     }
-    return { status: 'ready', database: this.db.status };
+    return { status: 'ready', database: status };
   }
 }
